@@ -96,6 +96,64 @@ function titleRuns(doc: LabelDocument, fontSize: number): TextRun[] {
   }))
 }
 
+function wrapTextRuns(runs: TextRun[], fontSize: number, maxWidth: number): TextRun[][] {
+  const lines: TextRun[][] = [[]]
+  let lineWidth = 0
+  let pendingSpace: TextRun | null = null
+
+  const estimatedWidth = (text: string, bold?: boolean) =>
+    [...text].reduce(
+      (width, char) =>
+        width + fontSize * (/\s/.test(char) ? 0.3 : bold ? 0.62 : 0.53),
+      0,
+    )
+
+  const append = (line: TextRun[], run: TextRun) => {
+    const previous = line[line.length - 1]
+    if (previous && previous.bold === run.bold && previous.fontSize === run.fontSize) {
+      previous.text += run.text
+    } else {
+      line.push({ ...run })
+    }
+  }
+
+  for (const run of runs) {
+    for (const token of run.text.split(/(\n|[ \t]+)/).filter(Boolean)) {
+      if (token === '\n') {
+        lines.push([])
+        lineWidth = 0
+        pendingSpace = null
+        continue
+      }
+      if (/^[ \t]+$/.test(token)) {
+        pendingSpace = { text: ' ', bold: run.bold, fontSize }
+        continue
+      }
+
+      const line = lines[lines.length - 1]
+      const word: TextRun = { text: token, bold: run.bold, fontSize }
+      const spaceWidth = line.length && pendingSpace
+        ? estimatedWidth(pendingSpace.text, pendingSpace.bold)
+        : 0
+      const wordWidth = estimatedWidth(word.text, word.bold)
+
+      if (line.length && lineWidth + spaceWidth + wordWidth > maxWidth) {
+        lines.push([])
+        lineWidth = 0
+      } else if (line.length && pendingSpace) {
+        append(line, pendingSpace)
+        lineWidth += spaceWidth
+      }
+
+      append(lines[lines.length - 1], word)
+      lineWidth += wordWidth
+      pendingSpace = null
+    }
+  }
+
+  return lines.filter((line) => line.length)
+}
+
 function sizeLabelLegalLines(doc: LabelDocument): Array<{
   text: string
   bold?: boolean
@@ -343,30 +401,32 @@ function sizeLabelPieceDouble(
 
   const titleX = leftX + 11.8
   const titleWidth = leftX + leftW - contentPad - titleX
-  const titleChars = Math.max(plainText(doc.title).length, 1)
-  const titleSize = Math.max(
-    1.2,
-    Math.min(doc.titleSizes.sizeLabel, 2.15, titleWidth / (titleChars * 0.58)),
-  )
+  const titleSize = doc.titleSizes.sizeLabelDouble
   const titleY = y + padY + 2.25
-  nodes.push({
-    type: 'text',
-    x: titleX,
-    y: titleY,
-    runs: titleRuns(doc, titleSize),
-    fill: '#000',
+  const titleLineHeight = titleSize * 0.95
+  const titleLines = wrapTextRuns(titleRuns(doc, titleSize), titleSize, titleWidth)
+  titleLines.forEach((runs, lineIndex) => {
+    nodes.push({
+      type: 'text',
+      x: titleX,
+      y: titleY + lineIndex * titleLineHeight,
+      runs,
+      fill: '#000',
+    })
   })
+  const titleLastY = titleY + Math.max(titleLines.length - 1, 0) * titleLineHeight
+  const skuY = Math.max(y + 5.8, titleLastY + titleSize * 0.52)
   nodes.push({
     type: 'text',
     x: leftX + brandPad,
-    y: y + 5.8,
+    y: skuY,
     runs: [{ text: `#${doc.sku}`, bold: false, fontSize: 1.8 }],
     fill: '#000',
   })
 
   const tableX = leftX + contentPad
   const tableW = leftW - contentPad * 2
-  const tableY = y + 8.4
+  const tableY = Math.min(y + 11.8, Math.max(y + 8.4, skuY + 0.7))
   nodes.push(
     ...drawSizeSystemTable({
       x: tableX,
@@ -440,7 +500,7 @@ function sizeLabelPieceNormal(
 ): SceneNode[] {
   const headers = headersForRow(row)
   const values = valuesForRow(row)
-  const titleSize = Math.min(doc.titleSizes.sizeLabel, 2.0)
+  const titleSize = doc.titleSizes.sizeLabel
   const pad = 1.5
   const brandPad = 2.5
   const contentW = w - pad * 2
@@ -878,7 +938,7 @@ export function buildBoxLabelScene(
     })
   }
 
-  const titleSize = Math.min(doc.titleSizes.box, 4.2)
+  const titleSize = doc.titleSizes.box
   const titleY = brandTop + wmH + 8.5
   nodes.push({
     type: 'text',
@@ -895,16 +955,18 @@ export function buildBoxLabelScene(
     fill: blue,
   })
 
-  // Badges are constrained by height, never by a shared width.
-  const boxLogoH = 5.5
-  const boxLogoY = titleY + titleSize + 4.0
-  const boxLogoStep = 5.5
+  // Tall badges, packed tight (gap only — no overlap).
+  const boxLogoH = 8
+  const boxLogoW = boxLogoH * 1.2
+  const boxLogoGap = 0.8
+  const boxLogoY = titleY + titleSize + 3.2
+  const boxLogoStep = boxLogoW + boxLogoGap
   logoHrefs.slice(0, 4).forEach((href, i) => {
     nodes.push({
       type: 'image',
       x: labelX + 12 + i * boxLogoStep,
       y: boxLogoY,
-      w: boxLogoH * 1.7,
+      w: boxLogoW,
       h: boxLogoH,
       href,
       fit: 'contain',
@@ -914,10 +976,10 @@ export function buildBoxLabelScene(
   if (productHref) {
     nodes.push({
       type: 'image',
-      x: labelX + 85.5,
-      y: brandTop - 4,
-      w: 45,
-      h: 41,
+      x: labelX + 82,
+      y: brandTop - 6,
+      w: 52,
+      h: 48,
       href: productHref,
       fit: 'contain',
     })
@@ -963,7 +1025,7 @@ export function buildBoxLabelScene(
     type: 'text',
     x: iconX + iconW / 2,
     y: madeInY,
-    runs: [{ text: l.madeIn.toUpperCase(), bold: false, fontSize: 2.3 }],
+    runs: [{ text: l.madeIn.toUpperCase(), bold: false, fontSize: 2.6 }],
     fill: '#444',
     anchor: 'middle',
   })

@@ -503,10 +503,10 @@ export default function App() {
               <label>Title size per output</label>
               <div className="title-sizes">
                 <label>
-                  Size labels (mm)
+                  Size normal (mm)
                   <input
                     type="number"
-                    min={2}
+                    min={1.2}
                     max={12}
                     step={0.1}
                     value={doc.titleSizes.sizeLabel}
@@ -516,6 +516,26 @@ export default function App() {
                         titleSizes: {
                           ...doc.titleSizes,
                           sizeLabel: Number(e.target.value) || doc.titleSizes.sizeLabel,
+                        },
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Size double (mm)
+                  <input
+                    type="number"
+                    min={1.2}
+                    max={12}
+                    step={0.1}
+                    value={doc.titleSizes.sizeLabelDouble}
+                    onChange={(e) =>
+                      setDoc({
+                        ...doc,
+                        titleSizes: {
+                          ...doc.titleSizes,
+                          sizeLabelDouble:
+                            Number(e.target.value) || doc.titleSizes.sizeLabelDouble,
                         },
                       })
                     }

@@ -12,7 +12,7 @@ import fontkit from '@pdf-lib/fontkit'
 import type { LabelDocument } from '@/domain/types'
 import type { LabelScene, SceneNode } from '@/templates/scenes'
 import { MM_TO_PT, PURE_BLACK, DEFAULT_RICH_BLACK, BOX_SHEET_MM } from '@/domain/types'
-import { urlToCanvas, canvasToSquare } from './imageDecode'
+import { urlToCanvas } from './imageDecode'
 
 async function fetchBytes(url: string): Promise<ArrayBuffer> {
   const res = await fetch(url)
@@ -21,7 +21,24 @@ async function fetchBytes(url: string): Promise<ArrayBuffer> {
 }
 
 function toPdfColor(hexOrBlack: string, mode: 'k-only' | 'cmyk'): RGB | CMYK {
-  if (mode === 'k-only') return cmyk(0, 0, 0, 1)
+  const h = hexOrBlack.replace('#', '')
+  const full =
+    h.length === 3
+      ? h
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : h
+  const n = parseInt(full || '000000', 16)
+  const r = ((n >> 16) & 255) / 255
+  const g = ((n >> 8) & 255) / 255
+  const b = (n & 255) / 255
+  if (mode === 'k-only') {
+    // K-only still needs to preserve tone: white is 0% K, black is 100% K.
+    // Converting every fill to 100% K made white page backgrounds solid black.
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return cmyk(0, 0, 0, Math.max(0, Math.min(1, 1 - luminance)))
+  }
   if (
     hexOrBlack === '#000' ||
     hexOrBlack === '#000000' ||
@@ -35,18 +52,6 @@ function toPdfColor(hexOrBlack: string, mode: 'k-only' | 'cmyk'): RGB | CMYK {
       DEFAULT_RICH_BLACK.k,
     )
   }
-  const h = hexOrBlack.replace('#', '')
-  const full =
-    h.length === 3
-      ? h
-          .split('')
-          .map((c) => c + c)
-          .join('')
-      : h
-  const n = parseInt(full || '000000', 16)
-  const r = ((n >> 16) & 255) / 255
-  const g = ((n >> 8) & 255) / 255
-  const b = (n & 255) / 255
   const k = 1 - Math.max(r, g, b)
   if (k > 0.99) return cmyk(PURE_BLACK.c, PURE_BLACK.m, PURE_BLACK.y, PURE_BLACK.k)
   return cmyk((1 - r - k) / (1 - k), (1 - g - k) / (1 - k), (1 - b - k) / (1 - k), k)
@@ -131,7 +136,20 @@ function drawNodes(
     } else if (node.type === 'image') {
       const img = images.get(node.href)
       if (!img) continue
-      img.draw(node.x * scale, Y(node.y, node.h), node.w * scale, node.h * scale)
+      const boxX = node.x * scale
+      const boxY = Y(node.y, node.h)
+      const boxW = node.w * scale
+      const boxH = node.h * scale
+      const imageRatio = img.width / img.height
+      const boxRatio = boxW / boxH
+      const drawW = imageRatio > boxRatio ? boxW : boxH * imageRatio
+      const drawH = imageRatio > boxRatio ? boxW / imageRatio : boxH
+      img.draw(
+        boxX + (boxW - drawW) / 2,
+        boxY + (boxH - drawH) / 2,
+        drawW,
+        drawH,
+      )
     }
   }
 }
@@ -193,28 +211,17 @@ export async function sceneToPdfBytes(
   for (const node of nodes) {
     if (node.type !== 'image' || images.has(node.href)) continue
     try {
-      if (node.href.match(/\.(svg)($|\?)/i)) {
-        // rasterize SVG via Image
-        const canvas = await urlToCanvas(node.href)
-        const jpeg = await canvasToJpeg(canvas)
-        const embedded = await pdf.embedJpg(jpeg)
-        images.set(node.href, {
-          width: embedded.width,
-          height: embedded.height,
-          draw: (x, y, w, h) =>
-            page.drawImage(embedded, { x, y, width: w, height: h }),
-        })
-      } else {
-        const canvas = canvasToSquare(await urlToCanvas(node.href))
-        const jpeg = await canvasToJpeg(canvas)
-        const embedded = await pdf.embedJpg(jpeg)
-        images.set(node.href, {
-          width: embedded.width,
-          height: embedded.height,
-          draw: (x, y, w, h) =>
-            page.drawImage(embedded, { x, y, width: w, height: h }),
-        })
-      }
+      // PNG preserves the transparent background of SVG logos. JPEG turned
+      // transparent pixels black, producing visible black rectangles.
+      const canvas = await urlToCanvas(node.href)
+      const png = await canvasToPng(canvas)
+      const embedded = await pdf.embedPng(png)
+      images.set(node.href, {
+        width: embedded.width,
+        height: embedded.height,
+        draw: (x, y, w, h) =>
+          page.drawImage(embedded, { x, y, width: w, height: h }),
+      })
     } catch {
       // skip missing images
     }
@@ -235,15 +242,14 @@ export async function sceneToPdfBytes(
   return pdf.save()
 }
 
-function canvasToJpeg(canvas: HTMLCanvasElement, quality = 0.92): Promise<ArrayBuffer> {
+function canvasToPng(canvas: HTMLCanvasElement): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       async (blob) => {
         if (!blob) return reject(new Error('toBlob failed'))
         resolve(await blob.arrayBuffer())
       },
-      'image/jpeg',
-      quality,
+      'image/png',
     )
   })
 }

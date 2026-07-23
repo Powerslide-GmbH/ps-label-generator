@@ -71,7 +71,10 @@ export type MaterialSelection = {
 
 /** Title size per output (size labels & box in mm, size chart in px). */
 export type TitleSizes = {
+  /** Normal 45×30 mm size label. */
   sizeLabel: number
+  /** Double 76×23 mm folded size label. */
+  sizeLabelDouble: number
   box: number
   sizeChart: number
 }
@@ -199,8 +202,9 @@ export const DEFAULT_MATERIALS: MaterialSelection = {
 
 /** Defaults tuned to documentation masters. */
 export const DEFAULT_TITLE_SIZES: TitleSizes = {
-  sizeLabel: 3.2,
-  box: 4.4,
+  sizeLabel: 2.2,
+  sizeLabelDouble: 2.3,
+  box: 4.8,
   sizeChart: 38,
 }
 
