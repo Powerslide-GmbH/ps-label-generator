@@ -321,7 +321,7 @@ function sizeLabelPieceDouble(
   const rightW = w / 2 - guideInset
   const contentPad = 0.6
   const brandPad = 1.8
-  const padY = 1.0
+  const padY = 0.4
   const nodes: SceneNode[] = [
     { type: 'rect', x, y, w, h, fill: '#fff', stroke: '#000', strokeWidth: 0.15 },
   ]
@@ -401,7 +401,7 @@ function sizeLabelPieceDouble(
   if (pairs.length) {
     nodes.push(
       ...drawMaterialPairs(pairs, {
-        x: foldX + 1.4,
+        x: foldX,
         y: y + 0.9,
         w: rightW - 4.8,
         h: h - 1.8,
@@ -520,8 +520,7 @@ function sizeLabelPieceNormal(
 
   const lines = sizeLabelLegalLines(doc)
   const lineH = 1.65
-  const footerBlockH = lines.length * lineH
-  const footerY = y + 22.7
+  const footerY = y + 23.3
   lines.forEach((line, i) => {
     nodes.push({
       type: 'text',
@@ -662,7 +661,7 @@ export function buildBoxLabelScene(
   const labelX = (pageW - BOX_LABEL.w) / 2
   const labelY = 21
   const marginX = 12
-  const marginTop = 11.5
+  const marginTop = 9.8
   const marginBottom = 6
   const blue = doc.brandColorHex
   const gridLine = '#d3d3d3'
@@ -774,14 +773,14 @@ export function buildBoxLabelScene(
   const gridW = contentRight - gridX
   const cols = Math.max(table.rows.length, 1)
   const colW = gridW / cols
-  const rowH = 6.0
+  const rowH = 6.3
   const sizeRowY = labelY + marginTop + 2
 
   nodes.push({
     type: 'text',
     x: gridX - 1.5,
-    y: sizeRowY + 1.2,
-    runs: [{ text: 'SIZE', bold: true, fontSize: 4.2 }],
+    y: sizeRowY + 2.5,
+    runs: [{ text: 'SIZE', bold: true, fontSize: 3.5 }],
     fill: '#111',
     anchor: 'end',
   })
@@ -891,18 +890,19 @@ export function buildBoxLabelScene(
   nodes.push({
     type: 'text',
     x: labelX + 12,
-    y: titleY + titleSize + 1.5,
+    y: titleY + titleSize + 0.2,
     runs: [{ text: doc.sku, bold: false, fontSize: 3.8 }],
     fill: blue,
   })
 
   // Badges are constrained by height, never by a shared width.
-  const boxLogoH = 4.5
-  const boxLogoY = titleY + titleSize + 6.3
+  const boxLogoH = 5.5
+  const boxLogoY = titleY + titleSize + 4.0
+  const boxLogoStep = 5.5
   logoHrefs.slice(0, 4).forEach((href, i) => {
     nodes.push({
       type: 'image',
-      x: labelX + 12 + i * (boxLogoH + 4),
+      x: labelX + 12 + i * boxLogoStep,
       y: boxLogoY,
       w: boxLogoH * 1.7,
       h: boxLogoH,
@@ -914,10 +914,10 @@ export function buildBoxLabelScene(
   if (productHref) {
     nodes.push({
       type: 'image',
-      x: labelX + 82,
+      x: labelX + 85.5,
       y: brandTop - 4,
-      w: 49,
-      h: 45,
+      w: 45,
+      h: 41,
       href: productHref,
       fit: 'contain',
     })

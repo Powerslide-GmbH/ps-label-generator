@@ -4,6 +4,7 @@ import type {
   MaterialSelection,
   ModelPreset,
   SizeChartTable,
+  SizeGroupMode,
   SizeRow,
 } from '@/domain/types'
 import { LOCATION_LOGO_IDS, normalizeMaterials } from '@/domain/types'
@@ -98,7 +99,8 @@ export function parseModelJson(
   const id = asString(raw.id)
   const name = asString(raw.name)
   const sizeChartId = asString(raw.sizeChartId) ?? undefined
-  let mode = raw.mode === 'single' || raw.mode === 'dual' ? raw.mode : null
+  let mode: SizeGroupMode | null =
+    raw.mode === 'single' || raw.mode === 'dual' ? raw.mode : null
   const brandColorHex = asString(raw.brandColorHex)
   const legalProfileId = asString(raw.legalProfileId)
 
