@@ -1,0 +1,93 @@
+{
+  "id": "next-outback-150-pds",
+  "name": "NEXT Outback 150 PDS",
+  "brandColorHex": "#416BE0",
+  "brandColorCmyk": {
+    "c": 0.76,
+    "m": 0.51,
+    "y": 0,
+    "k": 0
+  },
+  "brandWordmarkLogoId": "powerslide_logo_blue",
+  "badgeLogoId": "PS_small_CMYK",
+  "sizeChartId": "ps-urban-next",
+  "mode": "dual",
+  "defaultTitle": [
+    {
+      "text": "NEXT OUTBACK 150 PDS",
+      "bold": true
+    }
+  ],
+  "defaultSku": "908489",
+  "boxLogos": [
+    "PS_small_CMYK",
+    "seg_SUV_CMYK",
+    "Trinity_small_CMYK"
+  ],
+  "sizeChartLogos": [
+    "PS_small_CMYK",
+    "seg_SUV_CMYK"
+  ],
+  "materials": {
+    "upper": "label_syntetic_material",
+    "lining": "label_textile_material",
+    "sole": "label_syntetic_material"
+  },
+  "legalProfileId": "adult-class-a",
+  "outputs": {
+    "sizeLabelNormal": false,
+    "sizeLabelDouble": true,
+    "boxLabel": true,
+    "sizeChart": true
+  },
+  "defaultProductImageId": "908464-42265_PS_Next_Edge_150_2025_view01.tif",
+  "sizeTable": {
+    "id": "ps-urban-next",
+    "name": "PS-Urban-NEXT",
+    "mode": "dual",
+    "rows": [
+      {
+        "mondo": "229-236",
+        "usM": "5-5.5",
+        "usW": "6-6.5",
+        "uk": "4-4.5",
+        "eu": "36-37"
+      },
+      {
+        "mondo": "242-248",
+        "usM": "6-7",
+        "usW": "7-8",
+        "uk": "5-6",
+        "eu": "38-39"
+      },
+      {
+        "mondo": "255-261",
+        "usM": "7.5-8",
+        "usW": "8.5-9",
+        "uk": "6.5-7",
+        "eu": "40-41"
+      },
+      {
+        "mondo": "268-275",
+        "usM": "9-10",
+        "usW": "10-11",
+        "uk": "8-9",
+        "eu": "42-43"
+      },
+      {
+        "mondo": "282-289",
+        "usM": "10.5-11",
+        "usW": "",
+        "uk": "9.5-10",
+        "eu": "44-45"
+      },
+      {
+        "mondo": "296-303",
+        "usM": "12-12.5",
+        "usW": "",
+        "uk": "11-11.5",
+        "eu": "46-47"
+      }
+    ]
+  }
+}

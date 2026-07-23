@@ -1,0 +1,127 @@
+{
+  "id": "hc-evo-pro-boot",
+  "name": "HC EVO Pro Boot",
+  "brandColorHex": "#416BE0",
+  "brandColorCmyk": {
+    "c": 0.76,
+    "m": 0.51,
+    "y": 0,
+    "k": 0
+  },
+  "brandWordmarkLogoId": "powerslide_logo_blue",
+  "badgeLogoId": "PS_small_CMYK",
+  "sizeChartId": "ps-urban-hc-evo",
+  "mode": "single",
+  "defaultTitle": [
+    {
+      "text": "HC EVO PRO BOOT",
+      "bold": true
+    }
+  ],
+  "defaultSku": "908468",
+  "boxLogos": [
+    "PS_small_CMYK",
+    "seg_FIT"
+  ],
+  "sizeChartLogos": [
+    "PS_small_CMYK",
+    "seg_FIT"
+  ],
+  "materials": {
+    "upper": "label_syntetic_material",
+    "lining": "label_textile_material",
+    "sole": "label_syntetic_material"
+  },
+  "legalProfileId": "adult-class-a",
+  "outputs": {
+    "sizeLabelNormal": true,
+    "sizeLabelDouble": false,
+    "boxLabel": true,
+    "sizeChart": true
+  },
+  "defaultProductImageId": "908474_PS_Storm_80_Mango_2026_view01.tif",
+  "sizeTable": {
+    "id": "ps-urban-hc-evo",
+    "name": "PS-URBAN-HC-EVO",
+    "mode": "single",
+    "rows": [
+      {
+        "mondo": "229",
+        "usM": "5",
+        "usW": "6",
+        "uk": "4",
+        "eu": "36"
+      },
+      {
+        "mondo": "236",
+        "usM": "5.5",
+        "usW": "6.5",
+        "uk": "4.5",
+        "eu": "37"
+      },
+      {
+        "mondo": "242",
+        "usM": "6",
+        "usW": "7",
+        "uk": "5",
+        "eu": "38"
+      },
+      {
+        "mondo": "248",
+        "usM": "7",
+        "usW": "8",
+        "uk": "6",
+        "eu": "39"
+      },
+      {
+        "mondo": "255",
+        "usM": "7.5",
+        "usW": "8.5",
+        "uk": "6.5",
+        "eu": "40"
+      },
+      {
+        "mondo": "261",
+        "usM": "8",
+        "usW": "9",
+        "uk": "7",
+        "eu": "41"
+      },
+      {
+        "mondo": "268",
+        "usM": "9",
+        "usW": "10",
+        "uk": "8",
+        "eu": "42"
+      },
+      {
+        "mondo": "275",
+        "usM": "10",
+        "usW": "11",
+        "uk": "9",
+        "eu": "43"
+      },
+      {
+        "mondo": "282",
+        "usM": "10.5",
+        "usW": "",
+        "uk": "9.5",
+        "eu": "44"
+      },
+      {
+        "mondo": "289",
+        "usM": "11",
+        "usW": "",
+        "uk": "10",
+        "eu": "45"
+      },
+      {
+        "mondo": "296",
+        "usM": "12",
+        "usW": "",
+        "uk": "11",
+        "eu": "46"
+      }
+    ]
+  }
+}

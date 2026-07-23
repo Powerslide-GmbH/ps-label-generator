@@ -1,0 +1,410 @@
+From: Pablo Soler <p.soler@powerslide.de>
+To: Javier Rosa Gil <j.rosa@powerslide.de>
+Subject: Re: Labels
+Thread-Topic: Labels
+Thread-Index: AQHdFdq4ZQyKhFF4cU+rZiTobbh08bZxtcwG
+Date: Fri, 17 Jul 2026 13:34:54 +0000
+Message-ID:
+	<AS4PR10MB6160305F5D9D84621FF34BDEE4C62@AS4PR10MB6160.EURPRD10.PROD.OUTLOOK.COM>
+References: <A341FBF5-0717-41D3-A3BA-F479B72044FC@powerslide.de>
+ <AS4PR10MB61600C010028BE22D09CFB49E4C62@AS4PR10MB6160.EURPRD10.PROD.OUTLOOK.COM>
+ <CFB01846-B320-436A-9A7F-F83FA0D03A8E@powerslide.de>
+ <57BD4187-DCC4-4C08-84DF-8BD646E56884@powerslide.de>
+ <6C80B690-863C-4144-AF0A-DF2EFB55115D@powerslide.de>
+In-Reply-To: <6C80B690-863C-4144-AF0A-DF2EFB55115D@powerslide.de>
+Content-Language: en-US
+X-MS-Has-Attach:
+X-MS-Exchange-Organization-SCL: -1
+X-MS-TNEF-Correlator:
+X-MS-Exchange-Organization-RecordReviewCfmType: 0
+msip_labels:
+Content-Type: multipart/alternative;
+	boundary="_000_AS4PR10MB6160305F5D9D84621FF34BDEE4C62AS4PR10MB6160EURP_"
+MIME-Version: 1.0
+
+--_000_AS4PR10MB6160305F5D9D84621FF34BDEE4C62AS4PR10MB6160EURP_
+Content-Type: text/plain; charset="Windows-1252"
+Content-Transfer-Encoding: quoted-printable
+
+Genial tio! Pues el lunes si todo va bien hago un prototipo.
+Gracias por darme todo en detalle. A simple vista no me hace falta nada.
+
+Y si faltase a=F1adir algo, en la misma herramienta quiero explicar como a=
+=F1adir nuevas opciones para seleccionar (nuevos logos, tipos, fotos) y com=
+o guardar nuevos presets. Quiero que sea flexible sin editar el c=F3digo di=
+rectamente.
+________________________________
+From: Javier Rosa Gil <j.rosa@powerslide.de>
+Sent: Friday, July 17, 2026 14:37
+To: Pablo Soler <p.soler@powerslide.de>
+Subject: Re: Labels
+
+Te paso archivo de las etiquetas ajustado y a=F1ado dibujitos para los icon=
+os en la primera pag.
+Te paso tambi=E9n un enlace a un spread que he hecho con sizechart para 3 p=
+atines. Cada pat=EDn est=E1 en una hoja, dentro del mismo archivo. En cada =
+ret=EDcula has solo los numeros, para hacerlo sencillo. El orden es siempre=
+ el mismo: mondo point / US man / US Woman / UK / EU
+
+https://docs.google.com/spreadsheets/d/1eftqu_Mv3YdfBiDHnStxexRp2t9jVFsrX6D=
+_KUefMjg/edit?usp=3Dsharing
+
+
+El 17 jul 2026, a las 13:40, Javier Rosa Gil <j.rosa@powerslide.de<mailto:j=
+.rosa@powerslide.de>> escribi=F3:
+
+Perdona, no te hab=EDa pasado el diagrama:
+<LABELS_Diagram.ai>
+
+El 17 jul 2026, a las 13:36, Javier Rosa <j.rosa@powerslide.de<mailto:j.ros=
+a@powerslide.de>> escribi=F3:
+
+si se pudiera seleccionar todo desde drop menus seria la bomba, menos posib=
+ilidad de error y m=E1s r=E1pido. De hecho m=E1s que last, creo que lo idea=
+l seria seleccionar el modelo de pat=EDn, es m=E1s intuitivo y de esta mane=
+ra se puede automatizar los iconos de los materiales. Quizas se hace una li=
+sta un poco larga, pero se puede restringir dependiendo de la marca.
+Estoy con el material para entregarte pero me he encontrado con varios prob=
+lemas, el logo de powerslide no cabe en el espacio que habia previsto y est=
+oy haciendo ajustes en las etiquetas.
+
+La idea es pasarte esto:
+- Logos de marcas (de momento 3 o 4)
+- Size charts en excel, quer=EDa hacer 2 para probar, uno single size y otr=
+o dual size
+- iconos para los materiales del pat=EDn (esto quizas tambi=E9n podr=EDa se=
+r automatizado dependiendo de que pat=EDn se seleccione.
+- Segmento / modelo de pat=EDn, te pasare uno para cada marca de las que te=
+ pase
+- Im=E1gen de pat=EDn: te pasar=E9 una im=E1gen por marca, ser=E1 formato c=
+uadrado pero tengo que ver que tama=F1o en pixeles funciona bien
+
+Necesitas algo m=E1s a parte de eso?
+
+
+El 17 jul 2026, a las 13:29, Pablo Soler <p.soler@powerslide.de<mailto:p.so=
+ler@powerslide.de>> escribi=F3:
+
+Entonces a parte de estas variables que veo en tu .ai tenemos:
+LAST (a seleccionar entre los diferentes presets y luego poder editarlos an=
+yway)
+Color de marca?
+
+Yo si que me liar=EDa ya con lo del last, porque no es mucho mas trabajo.
+Incluso poder hacer presets de modelos as=ED no tienes que elegir nada. Se =
+rellena autom=E1ticamente, la marca, last con tallas, y materiales. Y as=ED=
+ cambiar solo el SKU y el titulo.
+
+Y sobre la prioridad, me hace ilusion probar pronto a ver que se puede hace=
+r. Lo cierto es que no creo que sea un desarrollo largo, quiz=E1 en 4h se c=
+onsigue si se tienen todos los datos.
+
+________________________________
+From: Javier Rosa Gil <j.rosa@powerslide.de<mailto:j.rosa@powerslide.de>>
+Sent: Friday, July 17, 2026 12:55
+To: Pablo Soler <p.soler@powerslide.de<mailto:p.soler@powerslide.de>>
+Subject: Labels
+
+Hola Pablo, he estado trabajando en unos masters que serviran para hacer la=
+ aplicaci=F3n para automatizar las etiquetas. =EBchale un ojo cuando puedas=
+ y dime si ves algo que no funcione o que pueda dar problemas.
+te paso tambi=E9n un esquema para que veas las diferentes variables de una =
+manera m=E1s sintetica. En el esquema falta una variable, que es la de =93s=
+egment=94. En un principio pens=E9 que no era muy =FAtil ya que solo la usa=
+ Powerslide, pero puede ser interesante para otras marcas para colocar un p=
+eque=F1o logo del modelo de pat=EDn, como por ejemplo el logo del ACT, o el=
+ de AEON=85
+la verdad esto quizas se pueda automatizar al elegir la marca y el last=85 =
+de momento quizas mejor no liarse con esto. Hay cosas que puede ser que cam=
+bien cuando hablemos con Chris y Marc, ellos puede que tengan otras necesid=
+ades o prioridades.
+ahora me pondr=E9 a hacer una lista de todos los elementos que puedes neces=
+itar (logos, charts con las tallas, imagen de pat=EDn=85 ) intentar=E9 envi=
+arte parte de este material para que podamos hacer una maqueta b=E1sica y v=
+er si funciona. como lo ves?
+
+
+En este punto quizas deberiamos pedirle a Matthias que prioridad le quiere =
+dar a este proyecto, imagino que debes tener cosas m=E1s importantes en mar=
+cha...
+
+
+
+
+--_000_AS4PR10MB6160305F5D9D84621FF34BDEE4C62AS4PR10MB6160EURP_
+Content-Type: text/html; charset="Windows-1252"
+Content-Transfer-Encoding: quoted-printable
+
+<html>
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3DWindows-1=
+252">
+<style type=3D"text/css" style=3D"display:none;"> P {margin-top:0;margin-bo=
+ttom:0;} </style>
+</head>
+<body dir=3D"ltr">
+<div class=3D"elementToProof" style=3D"font-family: Aptos, Aptos_EmbeddedFo=
+nt, Aptos_MSFontService, Calibri, Helvetica, sans-serif; font-size: 12pt; c=
+olor: rgb(0, 0, 0);">
+Genial tio! Pues el lunes si todo va bien hago un prototipo.</div>
+<div class=3D"elementToProof" style=3D"font-family: Aptos, Aptos_EmbeddedFo=
+nt, Aptos_MSFontService, Calibri, Helvetica, sans-serif; font-size: 12pt; c=
+olor: rgb(0, 0, 0);">
+Gracias por darme todo en detalle. A simple vista no me hace falta nada.</d=
+iv>
+<div class=3D"elementToProof" style=3D"font-family: Aptos, Aptos_EmbeddedFo=
+nt, Aptos_MSFontService, Calibri, Helvetica, sans-serif; font-size: 12pt; c=
+olor: rgb(0, 0, 0);">
+<br>
+</div>
+<div class=3D"elementToProof" style=3D"font-family: Aptos, Aptos_EmbeddedFo=
+nt, Aptos_MSFontService, Calibri, Helvetica, sans-serif; font-size: 12pt; c=
+olor: rgb(0, 0, 0);">
+Y si faltase a=F1adir algo, en la misma herramienta quiero explicar como a=
+=F1adir nuevas opciones para seleccionar (nuevos logos, tipos, fotos) y com=
+o guardar nuevos presets. Quiero que sea flexible sin editar el c=F3digo di=
+rectamente.</div>
+<div id=3D"appendonsend"></div>
+<hr style=3D"display:inline-block;width:98%" tabindex=3D"-1">
+<div id=3D"divRplyFwdMsg" dir=3D"ltr"><font face=3D"Calibri, sans-serif" st=
+yle=3D"font-size:11pt" color=3D"#000000"><b>From:</b> Javier Rosa Gil &lt;j=
+.rosa@powerslide.de&gt;<br>
+<b>Sent:</b> Friday, July 17, 2026 14:37<br>
+<b>To:</b> Pablo Soler &lt;p.soler@powerslide.de&gt;<br>
+<b>Subject:</b> Re: Labels</font>
+<div>&nbsp;</div>
+</div>
+<div>
+<div class=3D"" style=3D"word-wrap:break-word; line-break:after-white-space=
+">Te paso archivo de las etiquetas ajustado y a=F1ado dibujitos para los ic=
+onos en la primera pag.
+<div class=3D"">Te paso tambi=E9n un enlace a un spread que he hecho con si=
+zechart para 3 patines. Cada pat=EDn est=E1 en una hoja, dentro del mismo a=
+rchivo. En cada ret=EDcula has solo los numeros, para hacerlo sencillo. El =
+orden es siempre el mismo: mondo point / US
+ man / US Woman / UK / EU
+<div class=3D""><br class=3D"">
+</div>
+<div class=3D""></div>
+</div>
+</div>
+<div class=3D"" style=3D"word-wrap:break-word; line-break:after-white-space=
+">
+<div class=3D"">
+<div class=3D""></div>
+<div class=3D""><a href=3D"https://docs.google.com/spreadsheets/d/1eftqu_Mv=
+3YdfBiDHnStxexRp2t9jVFsrX6D_KUefMjg/edit?usp=3Dsharing" class=3D"">https://=
+docs.google.com/spreadsheets/d/1eftqu_Mv3YdfBiDHnStxexRp2t9jVFsrX6D_KUefMjg=
+/edit?usp=3Dsharing</a></div>
+<div class=3D""><br class=3D"">
+<div><br class=3D"">
+<blockquote type=3D"cite" class=3D"">
+<div class=3D"">El 17 jul 2026, a las 13:40, Javier Rosa Gil &lt;<a href=3D=
+"mailto:j.rosa@powerslide.de" class=3D"">j.rosa@powerslide.de</a>&gt; escri=
+bi=F3:</div>
+<br class=3D"x_x_Apple-interchange-newline">
+<div class=3D"">
+<div dir=3D"auto" class=3D"" style=3D"word-wrap:break-word; line-break:afte=
+r-white-space">
+Perdona, no te hab=EDa pasado el diagrama:
+<div class=3D""><span id=3D"x_x_cid:EA5574B4-C979-4468-9BD5-F5F66103910F">&=
+lt;LABELS_Diagram.ai&gt;</span><br class=3D"">
+<div class=3D"" style=3D"direction:ltr"><br class=3D"">
+<blockquote type=3D"cite" class=3D"">
+<div class=3D"">El 17 jul 2026, a las 13:36, Javier Rosa &lt;<a href=3D"mai=
+lto:j.rosa@powerslide.de" class=3D"">j.rosa@powerslide.de</a>&gt; escribi=
+=F3:</div>
+<br class=3D"x_x_Apple-interchange-newline">
+<div class=3D"">
+<div class=3D"" style=3D"word-wrap:break-word; line-break:after-white-space=
+">si se pudiera seleccionar todo desde drop menus seria la bomba, menos pos=
+ibilidad de error y m=E1s r=E1pido. De hecho m=E1s que last, creo que lo id=
+eal seria seleccionar el modelo de pat=EDn,
+ es m=E1s intuitivo y de esta manera se puede automatizar los iconos de los=
+ materiales. Quizas se hace una lista un poco larga, pero se puede restring=
+ir dependiendo de la marca.
+<div class=3D"">Estoy con el material para entregarte pero me he encontrado=
+ con varios problemas, el logo de powerslide no cabe en el espacio que habi=
+a previsto y estoy haciendo ajustes en las etiquetas.</div>
+<div class=3D""><br class=3D"">
+</div>
+<div class=3D"">La idea es pasarte esto:</div>
+<div class=3D"">- Logos de marcas (de momento 3 o 4)</div>
+<div class=3D"">- Size charts en excel, quer=EDa hacer 2 para probar, uno s=
+ingle size y otro dual size</div>
+<div class=3D"">- iconos para los materiales del pat=EDn (esto quizas tambi=
+=E9n podr=EDa ser automatizado dependiendo de que pat=EDn se seleccione.</d=
+iv>
+<div class=3D"">- Segmento / modelo de pat=EDn, te pasare uno para cada mar=
+ca de las que te pase</div>
+<div class=3D"">- Im=E1gen de pat=EDn: te pasar=E9 una im=E1gen por marca, =
+ser=E1 formato cuadrado pero tengo que ver que tama=F1o en pixeles funciona=
+ bien</div>
+<div class=3D""><br class=3D"">
+</div>
+<div class=3D"">Necesitas algo m=E1s a parte de eso?</div>
+<div class=3D""><br class=3D"">
+</div>
+<div class=3D"">
+<div class=3D""><br class=3D"">
+<blockquote type=3D"cite" class=3D"">
+<div class=3D"">El 17 jul 2026, a las 13:29, Pablo Soler &lt;<a href=3D"mai=
+lto:p.soler@powerslide.de" class=3D"">p.soler@powerslide.de</a>&gt; escribi=
+=F3:</div>
+<br class=3D"x_x_Apple-interchange-newline">
+<div class=3D"">
+<div class=3D"x_x_elementToProof" style=3D"font-style:normal; font-variant-=
+caps:normal; font-weight:400; letter-spacing:normal; text-align:start; text=
+-indent:0px; text-transform:none; white-space:normal; word-spacing:0px; tex=
+t-decoration:none; font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService=
+,Calibri,Helvetica,sans-serif; font-size:12pt">
+Entonces a parte de estas variables que veo en tu .ai tenemos:&nbsp;</div>
+<div class=3D"x_x_elementToProof" style=3D"font-style:normal; font-variant-=
+caps:normal; font-weight:400; letter-spacing:normal; text-align:start; text=
+-indent:0px; text-transform:none; white-space:normal; word-spacing:0px; tex=
+t-decoration:none; font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService=
+,Calibri,Helvetica,sans-serif; font-size:12pt">
+LAST (a seleccionar entre los diferentes presets y luego poder editarlos an=
+yway)</div>
+<div class=3D"x_x_elementToProof" style=3D"font-style:normal; font-variant-=
+caps:normal; font-weight:400; letter-spacing:normal; text-align:start; text=
+-indent:0px; text-transform:none; white-space:normal; word-spacing:0px; tex=
+t-decoration:none; font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService=
+,Calibri,Helvetica,sans-serif; font-size:12pt">
+Color de marca?</div>
+<div class=3D"x_x_elementToProof" style=3D"font-style:normal; font-variant-=
+caps:normal; font-weight:400; letter-spacing:normal; text-align:start; text=
+-indent:0px; text-transform:none; white-space:normal; word-spacing:0px; tex=
+t-decoration:none; font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService=
+,Calibri,Helvetica,sans-serif; font-size:12pt">
+<br class=3D"">
+</div>
+<div class=3D"x_x_elementToProof" style=3D"font-style:normal; font-variant-=
+caps:normal; font-weight:400; letter-spacing:normal; text-align:start; text=
+-indent:0px; text-transform:none; white-space:normal; word-spacing:0px; tex=
+t-decoration:none; font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService=
+,Calibri,Helvetica,sans-serif; font-size:12pt">
+Yo si que me liar=EDa ya con lo del last, porque no es mucho mas trabajo.</=
+div>
+<div class=3D"x_x_elementToProof" style=3D"font-style:normal; font-variant-=
+caps:normal; font-weight:400; letter-spacing:normal; text-align:start; text=
+-indent:0px; text-transform:none; white-space:normal; word-spacing:0px; tex=
+t-decoration:none; font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService=
+,Calibri,Helvetica,sans-serif; font-size:12pt">
+Incluso poder hacer presets de modelos as=ED no tienes que elegir nada. Se =
+rellena autom=E1ticamente, la marca, last con tallas, y materiales. Y as=ED=
+ cambiar solo el SKU y el titulo.</div>
+<div class=3D"x_x_elementToProof" style=3D"font-style:normal; font-variant-=
+caps:normal; font-weight:400; letter-spacing:normal; text-align:start; text=
+-indent:0px; text-transform:none; white-space:normal; word-spacing:0px; tex=
+t-decoration:none; font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService=
+,Calibri,Helvetica,sans-serif; font-size:12pt">
+<br class=3D"">
+</div>
+<div class=3D"x_x_elementToProof" style=3D"font-style:normal; font-variant-=
+caps:normal; font-weight:400; letter-spacing:normal; text-align:start; text=
+-indent:0px; text-transform:none; white-space:normal; word-spacing:0px; tex=
+t-decoration:none; font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService=
+,Calibri,Helvetica,sans-serif; font-size:12pt">
+Y sobre la prioridad, me hace ilusion probar pronto a ver que se puede hace=
+r. Lo cierto es que no creo que sea un desarrollo largo, quiz=E1 en 4h se c=
+onsigue si se tienen todos los datos.</div>
+<div class=3D"x_x_elementToProof" style=3D"font-style:normal; font-variant-=
+caps:normal; font-weight:400; letter-spacing:normal; text-align:start; text=
+-indent:0px; text-transform:none; white-space:normal; word-spacing:0px; tex=
+t-decoration:none; font-family:Aptos,Aptos_EmbeddedFont,Aptos_MSFontService=
+,Calibri,Helvetica,sans-serif; font-size:12pt">
+<br class=3D"">
+</div>
+<div id=3D"x_x_appendonsend" class=3D"" style=3D"font-family:Helvetica; fon=
+t-size:12px; font-style:normal; font-variant-caps:normal; font-weight:400; =
+letter-spacing:normal; text-align:start; text-indent:0px; text-transform:no=
+ne; white-space:normal; word-spacing:0px; text-decoration:none">
+</div>
+<hr tabindex=3D"-1" class=3D"" style=3D"font-family:Helvetica; font-size:12=
+px; font-style:normal; font-variant-caps:normal; font-weight:400; letter-sp=
+acing:normal; text-align:start; text-indent:0px; text-transform:none; white=
+-space:normal; word-spacing:0px; text-decoration:none; display:inline-block=
+; width:1131.890625px">
+<span class=3D"" style=3D"font-family:Helvetica; font-size:12px; font-style=
+:normal; font-variant-caps:normal; font-weight:400; letter-spacing:normal; =
+text-align:start; text-indent:0px; text-transform:none; white-space:normal;=
+ word-spacing:0px; text-decoration:none; float:none; display:inline!importa=
+nt"></span>
+<div id=3D"x_x_divRplyFwdMsg" dir=3D"ltr" class=3D"" style=3D"font-family:H=
+elvetica; font-size:12px; font-style:normal; font-variant-caps:normal; font=
+-weight:400; letter-spacing:normal; text-align:start; text-indent:0px; text=
+-transform:none; white-space:normal; word-spacing:0px; text-decoration:none=
+">
+<font face=3D"Calibri, sans-serif" class=3D"" style=3D"font-size:11pt"><b c=
+lass=3D"">From:</b><span class=3D"x_x_Apple-converted-space">&nbsp;</span>J=
+avier Rosa Gil &lt;<a href=3D"mailto:j.rosa@powerslide.de" class=3D"">j.ros=
+a@powerslide.de</a>&gt;<br class=3D"">
+<b class=3D"">Sent:</b><span class=3D"x_x_Apple-converted-space">&nbsp;</sp=
+an>Friday, July 17, 2026 12:55<br class=3D"">
+<b class=3D"">To:</b><span class=3D"x_x_Apple-converted-space">&nbsp;</span=
+>Pablo Soler &lt;<a href=3D"mailto:p.soler@powerslide.de" class=3D"">p.sole=
+r@powerslide.de</a>&gt;<br class=3D"">
+<b class=3D"">Subject:</b><span class=3D"x_x_Apple-converted-space">&nbsp;<=
+/span>Labels</font>
+<div class=3D"">&nbsp;</div>
+</div>
+<div class=3D"" style=3D"font-family:Helvetica; font-size:12px; font-style:=
+normal; font-variant-caps:normal; font-weight:400; letter-spacing:normal; t=
+ext-align:start; text-indent:0px; text-transform:none; white-space:normal; =
+word-spacing:0px; text-decoration:none">
+<div class=3D"x_x_x_BodyFragment"><font size=3D"2" class=3D""><span class=
+=3D"" style=3D"font-size:11pt">
+<div class=3D"x_x_x_PlainText">Hola Pablo, he estado trabajando en unos mas=
+ters que serviran para hacer la aplicaci=F3n para automatizar las etiquetas=
+. =EBchale un ojo cuando puedas y dime si ves algo que no funcione o que pu=
+eda dar problemas.<br class=3D"">
+te paso tambi=E9n un esquema para que veas las diferentes variables de una =
+manera m=E1s sintetica. En el esquema falta una variable, que es la de =93s=
+egment=94. En un principio pens=E9 que no era muy =FAtil ya que solo la usa=
+ Powerslide, pero puede ser interesante para
+ otras marcas para colocar un peque=F1o logo del modelo de pat=EDn, como po=
+r ejemplo el logo del ACT, o el de AEON=85<br class=3D"">
+la verdad esto quizas se pueda automatizar al elegir la marca y el last=85 =
+de momento quizas mejor no liarse con esto. Hay cosas que puede ser que cam=
+bien cuando hablemos con Chris y Marc, ellos puede que tengan otras necesid=
+ades o prioridades.<br class=3D"">
+ahora me pondr=E9 a hacer una lista de todos los elementos que puedes neces=
+itar (logos, charts con las tallas, imagen de pat=EDn=85 ) intentar=E9 envi=
+arte parte de este material para que podamos hacer una maqueta b=E1sica y v=
+er si funciona. como lo ves?<br class=3D"">
+<br class=3D"">
+</div>
+</span></font></div>
+<div class=3D"x_x_x_BodyFragment"><font size=3D"2" class=3D""><span class=
+=3D"" style=3D"font-size:11pt">
+<div class=3D"x_x_x_PlainText"><br class=3D"">
+En este punto quizas deberiamos pedirle a Matthias que prioridad le quiere =
+dar a este proyecto, imagino que debes tener cosas m=E1s importantes en mar=
+cha...</div>
+</span></font></div>
+</div>
+</div>
+</blockquote>
+</div>
+<br class=3D"">
+</div>
+</div>
+</div>
+</blockquote>
+</div>
+<br class=3D"">
+</div>
+</div>
+</div>
+</blockquote>
+</div>
+<br class=3D"">
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>
+
+--_000_AS4PR10MB6160305F5D9D84621FF34BDEE4C62AS4PR10MB6160EURP_--

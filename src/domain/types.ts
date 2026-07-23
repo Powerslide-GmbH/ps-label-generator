@@ -1,0 +1,207 @@
+export type Cmyk = { c: number; m: number; y: number; k: number }
+
+export type TextRun = {
+  text: string
+  bold?: boolean
+  fontSize?: number
+}
+
+export type RichText = TextRun[]
+
+export type SizeSystem = 'MONDO' | 'US M' | 'US W' | 'UK' | 'EU'
+
+export type SizeRow = {
+  mondo: string
+  usM: string
+  usW: string
+  uk: string
+  eu: string
+}
+
+/** How size values are written in the table (single number vs range like 36-38). */
+export type SizeGroupMode = 'single' | 'dual'
+
+export type SizeChartTable = {
+  id: string
+  name: string
+  mode: SizeGroupMode
+  rows: SizeRow[]
+}
+
+export type LegalProfile = {
+  id: string
+  classText: string
+  standard: string
+  weightRange: string
+  company: string
+  address: string
+  phone: string
+  fax: string
+  web: string
+  email: string
+  madeIn: string
+}
+
+export type OutputSelection = {
+  /** MASTER SIZE - NORMAL (45×30 mm) */
+  sizeLabelNormal: boolean
+  /** MASTER SIZE - DOUBLE (76×23 mm) */
+  sizeLabelDouble: boolean
+  boxLabel: boolean
+  sizeChart: boolean
+}
+
+export type AssetRef = {
+  id: string
+  path: string
+  label: string
+  name: string
+}
+
+export type MaterialSelection = {
+  /** Material icon for upper location (leather / synthetic / textile). */
+  upper?: string
+  /** Material icon for lining location. */
+  lining?: string
+  /** Material icon for sole location. */
+  sole?: string
+  /** @deprecated Old single material field — migrated into upper/lining/sole. */
+  materialType?: string
+}
+
+/** Title size per output (size labels & box in mm, size chart in px). */
+export type TitleSizes = {
+  sizeLabel: number
+  box: number
+  sizeChart: number
+}
+
+/** One product preset: branding + outputs + embedded size table. */
+export type ModelPreset = {
+  id: string
+  name: string
+  brandColorHex: string
+  brandColorCmyk: Cmyk
+  brandWordmarkLogoId?: string
+  /** Blue PS badge used on size-label page header (and similar). */
+  badgeLogoId?: string
+  /** @deprecated Prefer sizeTable embedded in the preset. */
+  sizeChartId?: string
+  mode: SizeGroupMode
+  /** Size run included in the preset (required for new presets). */
+  sizeTable?: SizeChartTable
+  defaultTitle: RichText
+  defaultSku?: string
+  boxLogos: string[]
+  sizeChartLogos: string[]
+  materials?: MaterialSelection
+  titleSizes?: Partial<TitleSizes>
+  legalProfileId: string
+  outputs: OutputSelection
+  defaultProductImageId?: string
+}
+
+export type LabelDocument = {
+  presetId: string | null
+  sku: string
+  title: RichText
+  productImagePath: string | null
+  productImageName: string | null
+  brandColorHex: string
+  brandColorCmyk: Cmyk
+  brandWordmarkLogoId: string | null
+  badgeLogoId: string | null
+  boxLogos: string[]
+  sizeChartLogos: string[]
+  materials: MaterialSelection
+  titleSizes: TitleSizes
+  sizeChartId: string
+  mode: SizeGroupMode
+  legal: LegalProfile
+  outputs: OutputSelection
+  sizeChartFootnote: string
+}
+
+export type ContentManifest = {
+  generatedAt: string
+  logos: AssetRef[]
+  fonts: AssetRef[]
+  products: AssetRef[]
+  sizecharts: AssetRef[]
+  models: AssetRef[]
+  icc: AssetRef[]
+}
+
+export const MM_TO_PT = 72 / 25.4
+export const A4_MM = { w: 297, h: 210 }
+/** Production sheet sizes from reference PDFs */
+export const BOX_SHEET_MM = { w: 196.3, h: 147.58 }
+export const SIZE_DOUBLE_SHEET_MM = { w: 206.43, h: 130.67 }
+export const SIZE_NORMAL_SHEET_MM = A4_MM
+/** @deprecated use SIZE_DOUBLE_SHEET_MM */
+export const SIZE_DUAL_SHEET_MM = SIZE_DOUBLE_SHEET_MM
+/** @deprecated use SIZE_NORMAL_SHEET_MM */
+export const SIZE_SINGLE_SHEET_MM = SIZE_NORMAL_SHEET_MM
+
+export const DEFAULT_RICH_BLACK: Cmyk = { c: 0.6, m: 0.4, y: 0.4, k: 1 }
+export const PURE_BLACK: Cmyk = { c: 0, m: 0, y: 0, k: 1 }
+
+export const POWERSLIDE_BLUE_HEX = '#416BE0'
+export const POWERSLIDE_BLUE_CMYK: Cmyk = { c: 0.76, m: 0.51, y: 0, k: 0 }
+
+/** Fixed location icons on size labels (not designer-selectable). */
+export const LOCATION_LOGO_IDS = {
+  upper: 'label_upper_material',
+  lining: 'label_liner_material',
+  sole: 'label_insole_material',
+} as const
+
+/** Selectable material-type icons (paired with each location). */
+export const MATERIAL_TYPE_LOGO_IDS = [
+  'label_leather_material',
+  'label_syntetic_material',
+  'label_textile_material',
+] as const
+
+const LOCATION_ID_SET = new Set<string>(Object.values(LOCATION_LOGO_IDS))
+const MATERIAL_ID_SET = new Set<string>(MATERIAL_TYPE_LOGO_IDS)
+
+export function isMaterialTypeLogoId(id: string | undefined | null): boolean {
+  return Boolean(id && MATERIAL_ID_SET.has(id))
+}
+
+/** Coerce legacy presets where upper/lining/sole pointed at location icons. */
+export function normalizeMaterials(
+  raw?: MaterialSelection | null,
+): MaterialSelection {
+  const fallback =
+    (raw?.materialType && isMaterialTypeLogoId(raw.materialType)
+      ? raw.materialType
+      : null) ?? 'label_syntetic_material'
+  const pick = (id: string | undefined, prefer?: string) => {
+    if (id && isMaterialTypeLogoId(id)) return id
+    if (prefer && isMaterialTypeLogoId(prefer)) return prefer
+    if (id && LOCATION_ID_SET.has(id)) return fallback
+    return fallback
+  }
+  return {
+    upper: pick(raw?.upper, raw?.materialType),
+    lining: pick(raw?.lining, 'label_textile_material'),
+    sole: pick(raw?.sole, raw?.materialType),
+  }
+}
+
+export const DEFAULT_MATERIALS: MaterialSelection = {
+  upper: 'label_syntetic_material',
+  lining: 'label_textile_material',
+  sole: 'label_syntetic_material',
+}
+
+/** Defaults tuned to documentation masters. */
+export const DEFAULT_TITLE_SIZES: TitleSizes = {
+  sizeLabel: 3.2,
+  box: 4.4,
+  sizeChart: 38,
+}
+
+export const STORAGE_VERSION = 4
