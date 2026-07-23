@@ -203,7 +203,14 @@ export default function App() {
   const scenes = useMemo(() => {
     const table = workingTable
     if (!table.rows.length) return null
-    const boxLogos = doc.boxLogos.map(logoHref).filter(Boolean)
+    const boxLogos = doc.boxLogos
+      .map((id) => {
+        const asset = catalog?.logoById.get(id)
+        const href = logoHref(id)
+        if (!href) return null
+        return { href, aspectRatio: asset?.aspectRatio }
+      })
+      .filter((x): x is { href: string; aspectRatio?: number } => Boolean(x))
     const chartLogos = doc.sizeChartLogos.map(logoHref).filter(Boolean)
     const product = productPreviewUrl || doc.productImagePath
     const colorWordmark = logoHref(doc.brandWordmarkLogoId) || undefined

@@ -56,6 +56,8 @@ export type AssetRef = {
   path: string
   label: string
   name: string
+  /** Natural width / height when known (SVG viewBox). Used to lock height. */
+  aspectRatio?: number
 }
 
 export type MaterialSelection = {

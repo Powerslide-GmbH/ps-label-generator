@@ -711,7 +711,7 @@ export function buildSizeLabelScene(
 export function buildBoxLabelScene(
   doc: LabelDocument,
   table: SizeChartTable,
-  logoHrefs: string[],
+  logos: Array<string | { href: string; aspectRatio?: number }>,
   productHref: string | null,
   assets: SceneAssets = {},
 ): LabelScene {
@@ -940,6 +940,7 @@ export function buildBoxLabelScene(
 
   const titleSize = doc.titleSizes.box
   const titleY = brandTop + wmH + 8.5
+  const skuSize = 4.6
   nodes.push({
     type: 'text',
     x: labelX + 12,
@@ -951,26 +952,31 @@ export function buildBoxLabelScene(
     type: 'text',
     x: labelX + 12,
     y: titleY + titleSize + 0.2,
-    runs: [{ text: doc.sku, bold: false, fontSize: 3.8 }],
+    runs: [{ text: doc.sku, bold: false, fontSize: skuSize }],
     fill: blue,
   })
 
-  // Tall badges, packed tight (gap only — no overlap).
-  const boxLogoH = 8
-  const boxLogoW = boxLogoH * 1.2
-  const boxLogoGap = 0.8
-  const boxLogoY = titleY + titleSize + 3.2
-  const boxLogoStep = boxLogoW + boxLogoGap
-  logoHrefs.slice(0, 4).forEach((href, i) => {
+  // Height is the lock (7 mm). Width follows each logo's natural aspect ratio.
+  const boxLogoH = 7
+  const boxLogoGap = 0.5
+  const boxLogoY = titleY + titleSize + skuSize + 1.2
+  let boxLogoX = labelX + 12
+  logos.slice(0, 4).forEach((entry) => {
+    const href = typeof entry === 'string' ? entry : entry.href
+    if (!href) return
+    const aspect =
+      typeof entry === 'string' ? 1 : Math.max(entry.aspectRatio ?? 1, 0.4)
+    const boxLogoW = boxLogoH * aspect
     nodes.push({
       type: 'image',
-      x: labelX + 12 + i * boxLogoStep,
+      x: boxLogoX,
       y: boxLogoY,
       w: boxLogoW,
       h: boxLogoH,
       href,
       fit: 'contain',
     })
+    boxLogoX += boxLogoW + boxLogoGap
   })
 
   if (productHref) {
@@ -1009,7 +1015,25 @@ export function buildBoxLabelScene(
   const iconH = 6.5
   const iconX = labelX + 90
   const madeInY = footerBottom
-  const iconY = madeInY - 9
+  const classLineH = 2.85
+  // Bottom-justify class block with MADE IN (same baseline on last line).
+  const classBottom = madeInY
+  const classLines = [
+    { text: l.standard, bold: false, fontSize: 2.45 },
+    { text: `${l.classText}:`, bold: true, fontSize: 2.45 },
+    { text: l.weightRange, bold: false, fontSize: 2.35 },
+  ]
+  classLines.forEach((line, i) => {
+    nodes.push({
+      type: 'text',
+      x: regRight,
+      y: classBottom - (classLines.length - 1 - i) * classLineH,
+      runs: [{ text: line.text, bold: line.bold, fontSize: line.fontSize }],
+      fill: '#222',
+      anchor: 'end',
+    })
+  })
+  const iconY = madeInY - iconH - 2.2
   if (assets.classLogoHref) {
     nodes.push({
       type: 'image',
@@ -1028,30 +1052,6 @@ export function buildBoxLabelScene(
     runs: [{ text: l.madeIn.toUpperCase(), bold: false, fontSize: 2.6 }],
     fill: '#444',
     anchor: 'middle',
-  })
-  nodes.push({
-    type: 'text',
-    x: regRight,
-    y: iconY + 2.2,
-    runs: [{ text: l.standard, bold: false, fontSize: 2.55 }],
-    fill: '#222',
-    anchor: 'end',
-  })
-  nodes.push({
-    type: 'text',
-    x: regRight,
-    y: iconY + 6.2,
-    runs: [{ text: `${l.classText}:`, bold: true, fontSize: 2.55 }],
-    fill: '#222',
-    anchor: 'end',
-  })
-  nodes.push({
-    type: 'text',
-    x: regRight,
-    y: iconY + 10.2,
-    runs: [{ text: l.weightRange, bold: false, fontSize: 2.45 }],
-    fill: '#222',
-    anchor: 'end',
   })
 
   return {

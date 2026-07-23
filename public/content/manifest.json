@@ -1,131 +1,152 @@
 {
-  "generatedAt": "2026-07-23T15:17:55.932Z",
+  "generatedAt": "2026-07-23T15:27:06.775Z",
   "logos": [
     {
       "id": "PS_big_CMYK",
       "name": "PS_big_CMYK.svg",
       "label": "PS big CMYK",
-      "path": "content/logos/PS_big_CMYK.svg"
+      "path": "content/logos/PS_big_CMYK.svg",
+      "aspectRatio": 8.9783
     },
     {
       "id": "PS_small",
       "name": "PS_small.svg",
       "label": "PS small",
-      "path": "content/logos/PS_small.svg"
+      "path": "content/logos/PS_small.svg",
+      "aspectRatio": 1
     },
     {
       "id": "PS_small_CMYK",
       "name": "PS_small_CMYK.svg",
       "label": "PS small CMYK",
-      "path": "content/logos/PS_small_CMYK.svg"
+      "path": "content/logos/PS_small_CMYK.svg",
+      "aspectRatio": 1
     },
     {
       "id": "Trinity_small_CMYK",
       "name": "Trinity_small_CMYK.svg",
       "label": "Trinity small CMYK",
-      "path": "content/logos/Trinity_small_CMYK.svg"
+      "path": "content/logos/Trinity_small_CMYK.svg",
+      "aspectRatio": 1.1718
     },
     {
       "id": "aeon_logo_black",
       "name": "aeon_logo_black.svg",
       "label": "aeon logo black",
-      "path": "content/logos/aeon_logo_black.svg"
+      "path": "content/logos/aeon_logo_black.svg",
+      "aspectRatio": 3.6034
     },
     {
       "id": "gawds_logo_black",
       "name": "gawds_logo_black.svg",
       "label": "gawds logo black",
-      "path": "content/logos/gawds_logo_black.svg"
+      "path": "content/logos/gawds_logo_black.svg",
+      "aspectRatio": 2.1598
     },
     {
       "id": "iqon_logo_black",
       "name": "iqon_logo_black.svg",
       "label": "iqon logo black",
-      "path": "content/logos/iqon_logo_black.svg"
+      "path": "content/logos/iqon_logo_black.svg",
+      "aspectRatio": 5.114
     },
     {
       "id": "iqon_logo_black_1",
       "name": "iqon_logo_black_1.svg",
       "label": "iqon logo black 1",
-      "path": "content/logos/iqon_logo_black_1.svg"
+      "path": "content/logos/iqon_logo_black_1.svg",
+      "aspectRatio": 1.496
     },
     {
       "id": "label_class",
       "name": "label_class.svg",
       "label": "label class",
-      "path": "content/logos/label_class.svg"
+      "path": "content/logos/label_class.svg",
+      "aspectRatio": 1.2444
     },
     {
       "id": "label_insole_material",
       "name": "label_insole_material.svg",
       "label": "label insole material",
-      "path": "content/logos/label_insole_material.svg"
+      "path": "content/logos/label_insole_material.svg",
+      "aspectRatio": 1.8971
     },
     {
       "id": "label_leather_material",
       "name": "label_leather_material.svg",
       "label": "label leather material",
-      "path": "content/logos/label_leather_material.svg"
+      "path": "content/logos/label_leather_material.svg",
+      "aspectRatio": 0.7972
     },
     {
       "id": "label_liner_material",
       "name": "label_liner_material.svg",
       "label": "label liner material",
-      "path": "content/logos/label_liner_material.svg"
+      "path": "content/logos/label_liner_material.svg",
+      "aspectRatio": 2.3678
     },
     {
       "id": "label_syntetic_material",
       "name": "label_syntetic_material.svg",
       "label": "label syntetic material",
-      "path": "content/logos/label_syntetic_material.svg"
+      "path": "content/logos/label_syntetic_material.svg",
+      "aspectRatio": 0.7512
     },
     {
       "id": "label_textile_material",
       "name": "label_textile_material.svg",
       "label": "label textile material",
-      "path": "content/logos/label_textile_material.svg"
+      "path": "content/logos/label_textile_material.svg",
+      "aspectRatio": 1
     },
     {
       "id": "label_upper_material",
       "name": "label_upper_material.svg",
       "label": "label upper material",
-      "path": "content/logos/label_upper_material.svg"
+      "path": "content/logos/label_upper_material.svg",
+      "aspectRatio": 2.4891
     },
     {
       "id": "powerslide_logo_black",
       "name": "powerslide_logo_black.svg",
       "label": "powerslide logo black",
-      "path": "content/logos/powerslide_logo_black.svg"
+      "path": "content/logos/powerslide_logo_black.svg",
+      "aspectRatio": 8.9646
     },
     {
       "id": "powerslide_logo_blue",
       "name": "powerslide_logo_blue.svg",
       "label": "powerslide logo blue",
-      "path": "content/logos/powerslide_logo_blue.svg"
+      "path": "content/logos/powerslide_logo_blue.svg",
+      "aspectRatio": 8.9646
     },
     {
       "id": "seg_FIT",
       "name": "seg_FIT.svg",
       "label": "seg FIT",
-      "path": "content/logos/seg_FIT.svg"
+      "path": "content/logos/seg_FIT.svg",
+      "aspectRatio": 1
     },
     {
       "id": "seg_SUV_CMYK",
       "name": "seg_SUV_CMYK.svg",
       "label": "seg SUV CMYK",
-      "path": "content/logos/seg_SUV_CMYK.svg"
+      "path": "content/logos/seg_SUV_CMYK.svg",
+      "aspectRatio": 2.2826
     },
     {
       "id": "seg_tr",
       "name": "seg_tr.svg",
       "label": "seg tr",
-      "path": "content/logos/seg_tr.svg"
+      "path": "content/logos/seg_tr.svg",
+      "aspectRatio": 2.0605
     },
     {
       "id": "usd_logo_black",
       "name": "usd_logo_black.svg",
       "label": "usd logo black",
-      "path": "content/logos/usd_logo_black.svg"
+      "path": "content/logos/usd_logo_black.svg",
+      "aspectRatio": 2.9489
     }
   ],
   "fonts": [
