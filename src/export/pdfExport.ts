@@ -1,6 +1,5 @@
 import {
   PDFDocument,
-  StandardFonts,
   cmyk,
   degrees,
   type PDFFont,
@@ -9,10 +8,28 @@ import {
   type CMYK,
 } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
-import type { LabelDocument } from '@/domain/types'
+import type { LabelDocument, PdfFontMode, BoxTextColorMode } from '@/domain/types'
 import type { LabelScene, SceneNode } from '@/templates/scenes'
-import { MM_TO_PT, PURE_BLACK, DEFAULT_RICH_BLACK, BOX_SHEET_MM } from '@/domain/types'
+import { MM_TO_PT, PURE_BLACK, BOX_SHEET_MM } from '@/domain/types'
 import { urlToCanvas } from './imageDecode'
+
+/** fontkit glyph path (runtime has scale/translate beyond the published d.ts). */
+type FkPath = {
+  toSVG: () => string
+  translate: (x: number, y: number) => FkPath
+  scale: (x: number, y: number) => FkPath
+}
+
+type FontkitFont = {
+  unitsPerEm: number
+  layout: (text: string) => {
+    glyphs: { path: FkPath }[]
+    positions: { xAdvance: number; yAdvance: number; xOffset: number; yOffset: number }[]
+    advanceWidth: number
+  }
+}
+
+export type PdfColorMode = 'k-only' | 'cmyk'
 
 async function fetchBytes(url: string): Promise<ArrayBuffer> {
   const res = await fetch(url)
@@ -20,7 +37,31 @@ async function fetchBytes(url: string): Promise<ArrayBuffer> {
   return res.arrayBuffer()
 }
 
-function toPdfColor(hexOrBlack: string, mode: 'k-only' | 'cmyk'): RGB | CMYK {
+/** Near-black / dark greys always become K=100 — never rich black. */
+function isNearBlackHex(hexOrBlack: string, luminance: number): boolean {
+  const h = hexOrBlack.toLowerCase()
+  return (
+    h === '#000' ||
+    h === '#000000' ||
+    h === '#111' ||
+    h === '#111111' ||
+    h === '#222' ||
+    h === '#222222' ||
+    luminance < 0.2
+  )
+}
+
+/**
+ * Convert hex fills to PDF color.
+ * - `k-only` / `textColorMode: pure-k`: greyscale K channel only.
+ * - Dark greys (#111/#222/#000) always map to CMYK(0,0,0,1), never rich black.
+ * - Brand hex otherwise converts hex→CMYK.
+ */
+export function toPdfColor(
+  hexOrBlack: string,
+  mode: PdfColorMode,
+  textColorMode: BoxTextColorMode = 'brand',
+): RGB | CMYK {
   const h = hexOrBlack.replace('#', '')
   const full =
     h.length === 3
@@ -33,25 +74,20 @@ function toPdfColor(hexOrBlack: string, mode: 'k-only' | 'cmyk'): RGB | CMYK {
   const r = ((n >> 16) & 255) / 255
   const g = ((n >> 8) & 255) / 255
   const b = (n & 255) / 255
-  if (mode === 'k-only') {
-    // K-only still needs to preserve tone: white is 0% K, black is 100% K.
-    // Converting every fill to 100% K made white page backgrounds solid black.
-    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+  if (luminance > 0.95) return cmyk(0, 0, 0, 0)
+
+  const forcePureK =
+    mode === 'k-only' || textColorMode === 'pure-k' || isNearBlackHex(hexOrBlack, luminance)
+
+  if (forcePureK) {
+    if (isNearBlackHex(hexOrBlack, luminance)) {
+      return cmyk(PURE_BLACK.c, PURE_BLACK.m, PURE_BLACK.y, PURE_BLACK.k)
+    }
     return cmyk(0, 0, 0, Math.max(0, Math.min(1, 1 - luminance)))
   }
-  if (
-    hexOrBlack === '#000' ||
-    hexOrBlack === '#000000' ||
-    hexOrBlack === '#111' ||
-    hexOrBlack === '#222'
-  ) {
-    return cmyk(
-      DEFAULT_RICH_BLACK.c,
-      DEFAULT_RICH_BLACK.m,
-      DEFAULT_RICH_BLACK.y,
-      DEFAULT_RICH_BLACK.k,
-    )
-  }
+
   const k = 1 - Math.max(r, g, b)
   if (k > 0.99) return cmyk(PURE_BLACK.c, PURE_BLACK.m, PURE_BLACK.y, PURE_BLACK.k)
   return cmyk((1 - r - k) / (1 - k), (1 - g - k) / (1 - k), (1 - b - k) / (1 - k), k)
@@ -61,32 +97,111 @@ function unitScale(scene: LabelScene): number {
   return scene.unit === 'mm' ? MM_TO_PT : 1
 }
 
-async function embedGilroy(pdf: PDFDocument, base = './') {
-  pdf.registerFontkit(fontkit as never)
-  const [regular, bold] = await Promise.all([
-    fetchBytes(`${base}content/fonts/Gilroy-Regular.ttf`),
-    fetchBytes(`${base}content/fonts/Gilroy-Bold.ttf`),
-  ])
-  const fontRegular = await pdf.embedFont(regular, { subset: true })
-  const fontBold = await pdf.embedFont(bold, { subset: true })
-  return { fontRegular, fontBold }
+async function loadGilroyBytes(base = './'): Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> {
+  try {
+    const [regular, bold] = await Promise.all([
+      fetchBytes(`${base}content/fonts/Gilroy-Regular.ttf`),
+      fetchBytes(`${base}content/fonts/Gilroy-Bold.ttf`),
+    ])
+    return { regular, bold }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    throw new Error(
+      `Gilroy fonts are required for label PDF export (failed to load from ${base}content/fonts/). ${msg}`,
+    )
+  }
+}
+
+function createFkFont(bytes: ArrayBuffer): FontkitFont {
+  return fontkit.create(new Uint8Array(bytes)) as FontkitFont
+}
+
+function fkTextWidth(font: FontkitFont, text: string, size: number): number {
+  const run = font.layout(text)
+  return (run.advanceWidth / font.unitsPerEm) * size
+}
+
+/**
+ * Outline Gilroy glyphs via fontkit and draw with drawSvgPath.
+ * Font design coords are Y-up; drawSvgPath expects SVG Y-down and flips Y,
+ * so we scale(1, -1) on the path first. Glyph advances are baked into the
+ * path so rotation applies around the run origin (matches drawText).
+ */
+function drawOutlinedText(
+  page: PDFPage,
+  text: string,
+  font: FontkitFont,
+  x: number,
+  y: number,
+  size: number,
+  color: CMYK | RGB,
+  rotateDeg?: number,
+) {
+  if (!text) return
+  const scale = size / font.unitsPerEm
+  const run = font.layout(text)
+  let cursor = 0
+  const rotation = rotateDeg ? degrees(rotateDeg) : undefined
+  for (let i = 0; i < run.glyphs.length; i++) {
+    const glyph = run.glyphs[i]
+    const pos = run.positions[i]
+    const svg = glyph.path
+      .translate(cursor + pos.xOffset, pos.yOffset)
+      .scale(1, -1)
+      .toSVG()
+    if (svg) {
+      try {
+        page.drawSvgPath(svg, {
+          x,
+          y,
+          scale,
+          color,
+          rotate: rotation,
+          borderWidth: 0,
+        })
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        throw new Error(`Failed to outline Gilroy glyph for PDF export: ${msg}`)
+      }
+    }
+    cursor += pos.xAdvance
+  }
+}
+
+type DrawFonts = {
+  pdfFontMode: PdfFontMode
+  fkRegular: FontkitFont
+  fkBold: FontkitFont
+  /** Present only in editable mode (embedded, unsubsetted). */
+  pdfRegular?: PDFFont
+  pdfBold?: PDFFont
 }
 
 function drawNodes(
   page: PDFPage,
   nodes: SceneNode[],
   scale: number,
-  fonts: { fontRegular: PDFFont; fontBold: PDFFont },
-  mode: 'k-only' | 'cmyk',
-  images: Map<string, { width: number; height: number; draw: (x: number, y: number, w: number, h: number) => void }>,
+  fonts: DrawFonts,
+  mode: PdfColorMode,
+  textColorMode: BoxTextColorMode,
+  images: Map<
+    string,
+    { width: number; height: number; draw: (x: number, y: number, w: number, h: number) => void }
+  >,
   pageH: number,
 ) {
   const Y = (y: number, h = 0) => pageH - (y + h) * scale
 
   for (const node of nodes) {
     if (node.type === 'rect') {
-      const color = node.fill && node.fill !== 'none' ? toPdfColor(node.fill, mode) : undefined
-      const stroke = node.stroke && node.stroke !== 'none' ? toPdfColor(node.stroke, mode) : undefined
+      const color =
+        node.fill && node.fill !== 'none'
+          ? toPdfColor(node.fill, mode, textColorMode)
+          : undefined
+      const stroke =
+        node.stroke && node.stroke !== 'none'
+          ? toPdfColor(node.stroke, mode, textColorMode)
+          : undefined
       page.drawRectangle({
         x: node.x * scale,
         y: Y(node.y, node.h),
@@ -101,7 +216,7 @@ function drawNodes(
         start: { x: node.x1 * scale, y: Y(node.y1) },
         end: { x: node.x2 * scale, y: Y(node.y2) },
         thickness: (node.strokeWidth ?? 0.5) * scale,
-        color: toPdfColor(node.stroke, mode) as CMYK | RGB,
+        color: toPdfColor(node.stroke, mode, textColorMode) as CMYK | RGB,
         dashArray: node.dash
           ? node.dash.split(/\s+/).map((n) => parseFloat(n) * scale)
           : undefined,
@@ -110,28 +225,39 @@ function drawNodes(
       let x = node.x * scale
       const fontSizeBase = node.runs[0]?.fontSize ?? 10
       const y = Y(node.y) - fontSizeBase * scale * 0.15
-      // approximate anchor by measuring
       let totalW = 0
       for (const run of node.runs) {
-        const font = run.bold ? fonts.fontBold : fonts.fontRegular
+        const fk = run.bold ? fonts.fkBold : fonts.fkRegular
         const size = (run.fontSize ?? 10) * scale
-        totalW += font.widthOfTextAtSize(run.text, size)
+        if (fonts.pdfFontMode === 'editable' && fonts.pdfRegular && fonts.pdfBold) {
+          const pdfFont = run.bold ? fonts.pdfBold : fonts.pdfRegular
+          totalW += pdfFont.widthOfTextAtSize(run.text, size)
+        } else {
+          totalW += fkTextWidth(fk, run.text, size)
+        }
       }
       if (node.anchor === 'middle') x -= totalW / 2
       if (node.anchor === 'end') x -= totalW
       let cx = x
       for (const run of node.runs) {
-        const font = run.bold ? fonts.fontBold : fonts.fontRegular
+        const fk = run.bold ? fonts.fkBold : fonts.fkRegular
         const size = (run.fontSize ?? 10) * scale
-        page.drawText(run.text, {
-          x: cx,
-          y,
-          size,
-          font,
-          color: toPdfColor(node.fill, mode) as CMYK | RGB,
-          rotate: node.rotate ? degrees(node.rotate) : undefined,
-        })
-        cx += font.widthOfTextAtSize(run.text, size)
+        const color = toPdfColor(node.fill, mode, textColorMode) as CMYK | RGB
+        if (fonts.pdfFontMode === 'editable' && fonts.pdfRegular && fonts.pdfBold) {
+          const pdfFont = run.bold ? fonts.pdfBold : fonts.pdfRegular
+          page.drawText(run.text, {
+            x: cx,
+            y,
+            size,
+            font: pdfFont,
+            color,
+            rotate: node.rotate ? degrees(node.rotate) : undefined,
+          })
+          cx += pdfFont.widthOfTextAtSize(run.text, size)
+        } else {
+          drawOutlinedText(page, run.text, fk, cx, y, size, color, node.rotate)
+          cx += fkTextWidth(fk, run.text, size)
+        }
       }
     } else if (node.type === 'image') {
       const img = images.get(node.href)
@@ -144,12 +270,7 @@ function drawNodes(
       const boxRatio = boxW / boxH
       const drawW = imageRatio > boxRatio ? boxW : boxH * imageRatio
       const drawH = imageRatio > boxRatio ? boxW / imageRatio : boxH
-      img.draw(
-        boxX + (boxW - drawW) / 2,
-        boxY + (boxH - drawH) / 2,
-        drawW,
-        drawH,
-      )
+      img.draw(boxX + (boxW - drawW) / 2, boxY + (boxH - drawH) / 2, drawW, drawH)
     }
   }
 }
@@ -172,20 +293,53 @@ function offsetNodes(nodes: SceneNode[], dx: number, dy: number): SceneNode[] {
   })
 }
 
+function isPdfHref(href: string): boolean {
+  if (/^data:application\/pdf/i.test(href)) return true
+  const clean = href.split('?')[0]?.split('#')[0]?.toLowerCase() ?? ''
+  return clean.endsWith('.pdf')
+}
+
 export async function sceneToPdfBytes(
   scene: LabelScene,
   opts: {
-    mode: 'k-only' | 'cmyk'
+    mode: PdfColorMode
     baseUrl?: string
+    pdfFontMode?: PdfFontMode
+    textColorMode?: BoxTextColorMode
   },
 ): Promise<Uint8Array> {
   const base = opts.baseUrl ?? './'
+  const pdfFontMode: PdfFontMode = opts.pdfFontMode ?? 'outlined'
+  const textColorMode: BoxTextColorMode = opts.textColorMode ?? 'brand'
   const pdf = await PDFDocument.create()
-  const fonts = await embedGilroy(pdf, base).catch(async () => {
-    const fontRegular = await pdf.embedFont(StandardFonts.Helvetica)
-    const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold)
-    return { fontRegular, fontBold }
-  })
+
+  const { regular, bold } = await loadGilroyBytes(base)
+  let fkRegular: FontkitFont
+  let fkBold: FontkitFont
+  try {
+    fkRegular = createFkFont(regular)
+    fkBold = createFkFont(bold)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    throw new Error(`Failed to parse Gilroy fonts for PDF export: ${msg}`)
+  }
+
+  const fonts: DrawFonts = {
+    pdfFontMode,
+    fkRegular,
+    fkBold,
+  }
+
+  if (pdfFontMode === 'editable') {
+    pdf.registerFontkit(fontkit as never)
+    try {
+      fonts.pdfRegular = await pdf.embedFont(regular, { subset: false })
+      fonts.pdfBold = await pdf.embedFont(bold, { subset: false })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      throw new Error(`Failed to embed Gilroy fonts for editable PDF export: ${msg}`)
+    }
+  }
 
   const scale = unitScale(scene)
   // Box label draws at 140×120; pad to production sheet size for print
@@ -211,17 +365,26 @@ export async function sceneToPdfBytes(
   for (const node of nodes) {
     if (node.type !== 'image' || images.has(node.href)) continue
     try {
-      // PNG preserves the transparent background of SVG logos. JPEG turned
-      // transparent pixels black, producing visible black rectangles.
-      const canvas = await urlToCanvas(node.href)
-      const png = await canvasToPng(canvas)
-      const embedded = await pdf.embedPng(png)
-      images.set(node.href, {
-        width: embedded.width,
-        height: embedded.height,
-        draw: (x, y, w, h) =>
-          page.drawImage(embedded, { x, y, width: w, height: h }),
-      })
+      if (isPdfHref(node.href)) {
+        // Preserve CMYK (and vectors) from PDF logos via page embed.
+        const pdfBytes = await fetchBytes(node.href)
+        const [embedded] = await pdf.embedPdf(pdfBytes, [0])
+        images.set(node.href, {
+          width: embedded.width,
+          height: embedded.height,
+          draw: (x, y, w, h) => page.drawPage(embedded, { x, y, width: w, height: h }),
+        })
+      } else {
+        // PNG/JPG/SVG via canvas rasterization — CMYK is not guaranteed for these embeds.
+        const canvas = await urlToCanvas(node.href)
+        const png = await canvasToPng(canvas)
+        const embedded = await pdf.embedPng(png)
+        images.set(node.href, {
+          width: embedded.width,
+          height: embedded.height,
+          draw: (x, y, w, h) => page.drawImage(embedded, { x, y, width: w, height: h }),
+        })
+      }
     } catch {
       // skip missing images
     }
@@ -238,7 +401,7 @@ export async function sceneToPdfBytes(
     })
   }
 
-  drawNodes(page, nodes, scale, fonts, opts.mode, images, pageH)
+  drawNodes(page, nodes, scale, fonts, opts.mode, textColorMode, images, pageH)
   return pdf.save()
 }
 
@@ -358,7 +521,14 @@ export type ExportBundleItem = {
 
 export async function buildExports(args: {
   doc: LabelDocument
-  scenes: { key: string; scene: LabelScene; filename: string; pdfMode?: 'k-only' | 'cmyk' }[]
+  scenes: {
+    key: string
+    scene: LabelScene
+    filename: string
+    pdfMode?: PdfColorMode
+    pdfFontMode?: PdfFontMode
+    textColorMode?: BoxTextColorMode
+  }[]
   baseUrl?: string
 }): Promise<ExportBundleItem[]> {
   const items: ExportBundleItem[] = []
@@ -370,6 +540,10 @@ export async function buildExports(args: {
       const bytes = await sceneToPdfBytes(entry.scene, {
         mode: entry.pdfMode ?? (entry.scene.kind === 'box' ? 'cmyk' : 'k-only'),
         baseUrl: args.baseUrl,
+        pdfFontMode: entry.pdfFontMode ?? args.doc.pdfFontMode ?? 'outlined',
+        textColorMode:
+          entry.textColorMode ??
+          (entry.scene.kind === 'box' ? args.doc.boxTextColorMode : 'pure-k'),
       })
       items.push({ filename: entry.filename, bytes })
     }

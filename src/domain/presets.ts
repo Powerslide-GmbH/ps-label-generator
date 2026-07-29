@@ -11,20 +11,15 @@ import {
 } from './types'
 import { richFromPlain } from './richText'
 import { cloneSizeTable, createEmptySizeTable } from './sizechart'
+import {
+  emptyBoxProductSlot,
+  legalProfileById,
+  migrateDocument,
+  migratePreset,
+  syncPrimaryProductFields,
+} from './boxConfig'
 
-export const DEFAULT_LEGAL: LegalProfile = {
-  id: 'adult-class-a',
-  classText: 'Class A',
-  standard: 'EN 13843:2009',
-  weightRange: '60-100kg/ 132-220lbs',
-  company: 'POWERSLIDE Sportartikelvertriebs GmbH',
-  address: 'Esbachgraben 1, 95463 Bindlach, Germany,',
-  phone: 'Ph. +49-(0)9208-6010-0',
-  fax: 'Fx. +49-(0)9208-9421',
-  web: 'www.powerslide.com',
-  email: 'powerslide@powerslide.de',
-  madeIn: 'MADE IN CHINA',
-}
+export const DEFAULT_LEGAL: LegalProfile = legalProfileById('adult-class-a')
 
 export function sizeTableFromPreset(
   preset: ModelPreset,
@@ -44,34 +39,77 @@ export function documentFromPreset(
   preset: ModelPreset,
   legal: LegalProfile,
 ): LabelDocument {
-  const table = sizeTableFromPreset(preset)
-  return {
-    presetId: preset.id,
-    sku: preset.defaultSku ?? '',
-    title: structuredClone(preset.defaultTitle),
-    productImagePath: preset.defaultProductImageId
-      ? `content/products/${preset.defaultProductImageId}`
-      : null,
-    productImageName: preset.defaultProductImageId ?? null,
-    brandColorHex: preset.brandColorHex,
-    brandColorCmyk: { ...preset.brandColorCmyk },
-    brandWordmarkLogoId: preset.brandWordmarkLogoId ?? 'powerslide_logo_blue',
-    badgeLogoId: preset.badgeLogoId ?? 'PS_small_CMYK',
-    boxLogos: [...preset.boxLogos],
-    sizeChartLogos: [...preset.sizeChartLogos],
-    materials: normalizeMaterials({ ...DEFAULT_MATERIALS, ...preset.materials }),
-    titleSizes: { ...DEFAULT_TITLE_SIZES, ...preset.titleSizes },
-    sizeChartId: table.id || preset.sizeChartId || '',
-    mode: table.mode || preset.mode,
-    legal: structuredClone(legal),
-    outputs: { ...preset.outputs },
-    sizeChartFootnote:
-      (table.mode || preset.mode) === 'dual' ? 'Range sizes' : 'Single sizes',
+  const normalized = migratePreset(preset)
+  const table = sizeTableFromPreset(normalized)
+  const primary =
+    normalized.boxProducts?.[0] ??
+    emptyBoxProductSlot(
+      '',
+      normalized.defaultSku ?? '',
+    )
+  if (!normalized.boxProducts?.[0]) {
+    primary.title = structuredClone(normalized.defaultTitle)
+    if (normalized.defaultProductImageId) {
+      primary.imageName = normalized.defaultProductImageId
+      primary.imagePath = `content/products/${normalized.defaultProductImageId}`
+    }
   }
+
+  const boxProducts =
+    normalized.boxProductMode === 'dual'
+      ? [
+          primary,
+          normalized.boxProducts?.[1] ?? emptyBoxProductSlot('PRODUCT 2', ''),
+        ]
+      : [primary]
+
+  return migrateDocument({
+    presetId: normalized.id,
+    sku: primary.sku,
+    // Dual: keep model/range title for size labels + side-by-side headers.
+    // Product columns use boxProducts[*].title.
+    title:
+      normalized.boxProductMode === 'dual'
+        ? structuredClone(normalized.defaultTitle)
+        : structuredClone(primary.title),
+    productImagePath: primary.imagePath,
+    productImageName: primary.imageName,
+    brandColorHex: normalized.brandColorHex,
+    brandColorCmyk: { ...normalized.brandColorCmyk },
+    brandWordmarkLogoId: normalized.brandWordmarkLogoId ?? 'powerslide_logo_blue',
+    badgeLogoId: normalized.badgeLogoId ?? 'PS_small_CMYK',
+    boxLogos: [...normalized.boxLogos],
+    boxLogoRefs: normalized.boxLogoRefs,
+    customLogos: normalized.customLogos,
+    sizeChartLogos: [...normalized.sizeChartLogos],
+    materials: normalizeMaterials({
+      ...DEFAULT_MATERIALS,
+      ...normalized.materials,
+    }),
+    titleSizes: { ...DEFAULT_TITLE_SIZES, ...normalized.titleSizes },
+    sizeChartId: table.id || normalized.sizeChartId || '',
+    mode: table.mode || normalized.mode,
+    legal: structuredClone(
+      normalized.legalProfileId === legal.id
+        ? legal
+        : legalProfileById(normalized.legalProfileId),
+    ),
+    outputs: { ...normalized.outputs },
+    sizeChartFootnote:
+      (table.mode || normalized.mode) === 'dual' ? 'Range sizes' : 'Single sizes',
+    boxProductMode: normalized.boxProductMode,
+    boxProducts,
+    boxDimensionsMm: normalized.boxDimensionsMm,
+    enabledSizeSystems: normalized.enabledSizeSystems,
+    boxTableFlow: normalized.boxTableFlow,
+    legalDisplay: normalized.legalDisplay,
+    pdfFontMode: normalized.pdfFontMode,
+    boxTextColorMode: normalized.boxTextColorMode,
+  })
 }
 
 export function emptyDocument(): LabelDocument {
-  return {
+  return migrateDocument({
     presetId: null,
     sku: '',
     title: richFromPlain('PRODUCT NAME', { bold: true }),
@@ -95,7 +133,7 @@ export function emptyDocument(): LabelDocument {
       sizeChart: true,
     },
     sizeChartFootnote: 'Range sizes',
-  }
+  })
 }
 
 export function documentToModelPreset(
@@ -104,30 +142,41 @@ export function documentToModelPreset(
   sizeTable: SizeChartTable,
   id?: string,
 ): ModelPreset {
+  const synced = syncPrimaryProductFields(doc)
   const table = cloneSizeTable(sizeTable)
   table.id = table.id || id || `preset-${Date.now()}`
   table.name = table.name || name
-  table.mode = doc.mode
-  return {
+  table.mode = synced.mode
+  return migratePreset({
     id: id ?? `user-${Date.now()}`,
     name,
-    brandColorHex: doc.brandColorHex,
-    brandColorCmyk: { ...doc.brandColorCmyk },
-    brandWordmarkLogoId: doc.brandWordmarkLogoId ?? undefined,
-    badgeLogoId: doc.badgeLogoId ?? undefined,
+    brandColorHex: synced.brandColorHex,
+    brandColorCmyk: { ...synced.brandColorCmyk },
+    brandWordmarkLogoId: synced.brandWordmarkLogoId ?? undefined,
+    badgeLogoId: synced.badgeLogoId ?? undefined,
     sizeChartId: table.id,
-    mode: doc.mode,
+    mode: synced.mode,
     sizeTable: table,
-    defaultTitle: structuredClone(doc.title),
-    defaultSku: doc.sku,
-    boxLogos: [...doc.boxLogos],
-    sizeChartLogos: [...doc.sizeChartLogos],
-    materials: normalizeMaterials(doc.materials),
-    titleSizes: { ...doc.titleSizes },
-    legalProfileId: doc.legal.id,
-    outputs: { ...doc.outputs },
-    defaultProductImageId: doc.productImageName ?? undefined,
-  }
+    defaultTitle: structuredClone(synced.title),
+    defaultSku: synced.sku,
+    boxLogos: [...synced.boxLogos],
+    boxLogoRefs: [...synced.boxLogoRefs],
+    customLogos: [...synced.customLogos],
+    sizeChartLogos: [...synced.sizeChartLogos],
+    materials: normalizeMaterials(synced.materials),
+    titleSizes: { ...synced.titleSizes },
+    legalProfileId: synced.legal.id,
+    outputs: { ...synced.outputs },
+    defaultProductImageId: synced.productImageName ?? undefined,
+    boxProductMode: synced.boxProductMode,
+    boxProducts: structuredClone(synced.boxProducts),
+    boxDimensionsMm: { ...synced.boxDimensionsMm },
+    enabledSizeSystems: [...synced.enabledSizeSystems],
+    boxTableFlow: { ...synced.boxTableFlow },
+    legalDisplay: { ...synced.legalDisplay },
+    pdfFontMode: synced.pdfFontMode,
+    boxTextColorMode: synced.boxTextColorMode,
+  })
 }
 
 /** Normalize pasted hex (#RGB / #RRGGBB / without #). */

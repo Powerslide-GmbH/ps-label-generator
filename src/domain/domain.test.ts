@@ -204,6 +204,7 @@ describe('size table csv/excel', () => {
       mondo: '229',
       usM: '5',
       usW: '6',
+      usKids: '',
       uk: '4',
       eu: '36',
     })
@@ -229,5 +230,81 @@ describe('sizechart module surface', () => {
     expect('parseSizeChartWorkbook' in mod).toBe(false)
     const io = await import('@/domain/sizeTableIo')
     expect(typeof io.parseSizeWorkbook).toBe('function')
+  })
+})
+
+describe('box config migration & class helpers', () => {
+  it('migrateDocument fills box defaults', async () => {
+    const { migrateDocument } = await import('@/domain/boxConfig')
+    const {
+      DEFAULT_BOX_DIMENSIONS_MM,
+      DEFAULT_BOX_TABLE_FLOW,
+      DEFAULT_LEGAL_DISPLAY,
+      DEFAULT_SIZE_SYSTEMS,
+    } = await import('@/domain/types')
+    const doc = migrateDocument({
+      sku: '1',
+      title: [{ text: 'DEMO', bold: true }],
+      boxProductMode: 'single',
+      boxDimensionsMm: { width: 140, height: 120 },
+    })
+    expect(doc.boxProductMode).toBe('single')
+    expect(doc.boxDimensionsMm).toEqual(DEFAULT_BOX_DIMENSIONS_MM)
+    expect(doc.enabledSizeSystems).toEqual(DEFAULT_SIZE_SYSTEMS)
+    expect(doc.boxTableFlow).toEqual(DEFAULT_BOX_TABLE_FLOW)
+    expect(doc.legalDisplay).toEqual(DEFAULT_LEGAL_DISPLAY)
+    expect(doc.pdfFontMode).toBe('outlined')
+    expect(doc.boxTextColorMode).toBe('pure-k')
+    expect(doc.boxProducts).toHaveLength(1)
+    expect(doc.customLogos).toEqual([])
+  })
+
+  it('bulkAssignClassByEu assigns A/B and reports crosses', async () => {
+    const { bulkAssignClassByEu } = await import('@/domain/boxConfig')
+    const table = {
+      id: 'cls',
+      name: 'cls',
+      mode: 'dual' as const,
+      rows: [
+        { mondo: '160', usM: '', usW: '', uk: '', eu: '30' },
+        { mondo: '240', usM: '', usW: '', uk: '', eu: '38' },
+        { mondo: '200-250', usM: '', usW: '', uk: '', eu: '32-36' },
+      ],
+    }
+    const { table: next, crosses } = bulkAssignClassByEu(table)
+    expect(next.rows[0].legalProfileId).toBe('kids-class-b')
+    expect(next.rows[1].legalProfileId).toBe('adult-class-a')
+    expect(crosses).toEqual([2])
+  })
+})
+
+describe('size table headers for US Kids + CLASS', () => {
+  it('matchSizeHeader recognizes US Kids and CLASS aliases', async () => {
+    const { matchSizeHeader } = await import('@/domain/sizeTableIo')
+    expect(matchSizeHeader('US Kids')).toBe('usKids')
+    expect(matchSizeHeader('US Junior')).toBe('usKids')
+    expect(matchSizeHeader('CLASS')).toBe('legalProfileId')
+    expect(matchSizeHeader('Class A B')).toBe('legalProfileId')
+  })
+
+  it('parseSizeMatrix keeps US Kids and CLASS columns', async () => {
+    const { parseSizeMatrix } = await import('@/domain/sizeTableIo')
+    const table = parseSizeMatrix('kids-class', [
+      ['MONDO', '170-185', '190-205'],
+      ['US Kids', '10.5-12.5', '13-2'],
+      ['UK', '10-12', '12.5-1.5'],
+      ['EU', '28-31', '32-34'],
+      ['CLASS', 'B', 'A'],
+    ])
+    expect(table.rows).toHaveLength(2)
+    expect(table.rows[0]).toMatchObject({
+      mondo: '170-185',
+      usKids: '10.5-12.5',
+      uk: '10-12',
+      eu: '28-31',
+      legalProfileId: 'kids-class-b',
+    })
+    expect(table.rows[1].legalProfileId).toBe('adult-class-a')
+    expect(table.mode).toBe('dual')
   })
 })

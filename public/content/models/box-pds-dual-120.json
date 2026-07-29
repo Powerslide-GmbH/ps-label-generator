@@ -1,0 +1,194 @@
+{
+  "id": "box-pds-dual-120",
+  "name": "ACCEL EVO PDS Dual 120×100",
+  "brandColorHex": "#416BE0",
+  "brandColorCmyk": {
+    "c": 0.76,
+    "m": 0.51,
+    "y": 0,
+    "k": 0
+  },
+  "brandWordmarkLogoId": "powerslide_logo_blue",
+  "badgeLogoId": "PS_small_CMYK",
+  "sizeChartId": "box-pds-dual-120",
+  "mode": "dual",
+  "defaultTitle": [
+    {
+      "text": "ACCEL EVO PDS",
+      "bold": true
+    }
+  ],
+  "defaultSku": "904723",
+  "boxLogos": [
+    "PS_small_CMYK",
+    "seg_FIT"
+  ],
+  "sizeChartLogos": [
+    "PS_small_CMYK",
+    "seg_FIT"
+  ],
+  "materials": {
+    "upper": "label_syntetic_material",
+    "lining": "label_textile_material",
+    "sole": "label_syntetic_material"
+  },
+  "legalProfileId": "adult-class-a",
+  "outputs": {
+    "sizeLabelNormal": false,
+    "sizeLabelDouble": true,
+    "boxLabel": true,
+    "sizeChart": false
+  },
+  "defaultProductImageId": "908482_Zoom_Pro_90_Sand_2026_view01.tif",
+  "boxProductMode": "dual",
+  "boxProducts": [
+    {
+      "title": [
+        {
+          "text": "ACCEL EVO PDS Pink",
+          "bold": true
+        }
+      ],
+      "subtitle": "BOOT ONLY",
+      "sku": "904723",
+      "imageName": "908482_Zoom_Pro_90_Sand_2026_view01.tif",
+      "imagePath": "content/products/908482_Zoom_Pro_90_Sand_2026_view01.tif"
+    },
+    {
+      "title": [
+        {
+          "text": "ACCEL EVO PDS Silver",
+          "bold": true
+        }
+      ],
+      "subtitle": "BOOT ONLY",
+      "sku": "904724",
+      "imageName": "908464-42265_PS_Next_Edge_150_2025_view01.tif",
+      "imagePath": "content/products/908464-42265_PS_Next_Edge_150_2025_view01.tif"
+    }
+  ],
+  "boxDimensionsMm": {
+    "width": 120,
+    "height": 100
+  },
+  "enabledSizeSystems": [
+    "MONDO",
+    "US M",
+    "US W",
+    "UK",
+    "EU"
+  ],
+  "boxTableFlow": {
+    "mode": "auto"
+  },
+  "legalDisplay": {
+    "showCompany": false,
+    "showPostalAddress": false,
+    "showPhoneFax": false,
+    "showWebEmail": false,
+    "showStandard": false,
+    "showClass": false,
+    "showWeight": false,
+    "showMadeIn": true
+  },
+  "pdfFontMode": "outlined",
+  "boxTextColorMode": "brand",
+  "sizeTable": {
+    "id": "box-pds-dual-120",
+    "name": "ACCEL-EVO-PDS",
+    "mode": "single",
+    "rows": [
+      {
+        "mondo": "223",
+        "usM": "4",
+        "usW": "5",
+        "uk": "3",
+        "eu": "35"
+      },
+      {
+        "mondo": "230",
+        "usM": "5",
+        "usW": "6",
+        "uk": "4",
+        "eu": "36"
+      },
+      {
+        "mondo": "237",
+        "usM": "5.5",
+        "usW": "6.5",
+        "uk": "4.5",
+        "eu": "37"
+      },
+      {
+        "mondo": "244",
+        "usM": "6",
+        "usW": "7",
+        "uk": "5",
+        "eu": "38"
+      },
+      {
+        "mondo": "250",
+        "usM": "7",
+        "usW": "8",
+        "uk": "6",
+        "eu": "39"
+      },
+      {
+        "mondo": "257",
+        "usM": "7.5",
+        "usW": "8.5",
+        "uk": "6.5",
+        "eu": "40"
+      },
+      {
+        "mondo": "264",
+        "usM": "8",
+        "usW": "9",
+        "uk": "7",
+        "eu": "41"
+      },
+      {
+        "mondo": "270",
+        "usM": "9",
+        "usW": "10",
+        "uk": "8",
+        "eu": "42"
+      },
+      {
+        "mondo": "277",
+        "usM": "10",
+        "usW": "11",
+        "uk": "9",
+        "eu": "43"
+      },
+      {
+        "mondo": "283",
+        "usM": "10.5",
+        "usW": "",
+        "uk": "9.5",
+        "eu": "44"
+      },
+      {
+        "mondo": "290",
+        "usM": "11",
+        "usW": "",
+        "uk": "10",
+        "eu": "45"
+      },
+      {
+        "mondo": "297",
+        "usM": "12",
+        "usW": "",
+        "uk": "11",
+        "eu": "46"
+      },
+      {
+        "mondo": "303",
+        "usM": "12.5",
+        "usW": "",
+        "uk": "11.5",
+        "eu": "47"
+      }
+    ]
+  }
+}

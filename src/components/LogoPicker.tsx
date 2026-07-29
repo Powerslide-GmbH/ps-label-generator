@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import type { AssetRef } from '@/domain/types'
+import {
+  inlineLogoToAssetRef,
+  readInlineLogoFromFile,
+  type InlineLogo,
+} from '@/domain/customLogo'
 
 type Props = {
   logos: AssetRef[]
@@ -13,9 +18,13 @@ type Props = {
   /** Optional override preview URLs by logo id (e.g. tinted wordmark). */
   previewSrcById?: Record<string, string>
   hint?: string
+  /** Persist a PC upload into the document (customLogos). Default: enabled. */
+  allowUpload?: boolean
+  onImportCustom?: (logo: InlineLogo) => void
 }
 
 function logoSrc(path: string) {
+  if (path.startsWith('data:') || path.startsWith('blob:')) return path
   return path.startsWith('content/') ? `./${path}` : path
 }
 
@@ -28,10 +37,15 @@ export function LogoPicker({
   dense = false,
   previewSrcById,
   hint,
+  allowUpload = true,
+  onImportCustom,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [draft, setDraft] = useState<string[]>(selected)
+  const [localExtras, setLocalExtras] = useState<AssetRef[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (open) {
@@ -49,24 +63,29 @@ export function LogoPicker({
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
+  const catalogPlusLocal = useMemo(() => {
+    const seen = new Set(logos.map((l) => l.id))
+    return [...logos, ...localExtras.filter((l) => !seen.has(l.id))]
+  }, [logos, localExtras])
+
   const selectedAssets = useMemo(
     () =>
       selected
-        .map((id) => logos.find((l) => l.id === id))
+        .map((id) => catalogPlusLocal.find((l) => l.id === id))
         .filter((x): x is AssetRef => Boolean(x)),
-    [logos, selected],
+    [catalogPlusLocal, selected],
   )
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return logos
-    return logos.filter(
+    if (!q) return catalogPlusLocal
+    return catalogPlusLocal.filter(
       (l) =>
         l.label.toLowerCase().includes(q) ||
         l.name.toLowerCase().includes(q) ||
         l.id.toLowerCase().includes(q),
     )
-  }, [logos, query])
+  }, [catalogPlusLocal, query])
 
   function toggleDraft(id: string) {
     if (multiple) {
@@ -103,12 +122,32 @@ export function LogoPicker({
     setOpen(false)
   }
 
+  async function handleUpload(file: File | null) {
+    if (!file || !onImportCustom) return
+    setUploading(true)
+    try {
+      const inline = await readInlineLogoFromFile(file)
+      if (!inline.cmykPreserving) {
+        window.alert('CMYK not guaranteed for raster/SVG uploads. Prefer PDF for production.')
+      }
+      onImportCustom(inline)
+      setLocalExtras((prev) => [...prev, inlineLogoToAssetRef(inline)])
+      setDraft((prev) => (multiple ? [...prev.filter((id) => id !== inline.id), inline.id] : [inline.id]))
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : 'Could not import logo.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const summary =
     selectedAssets.length === 0
       ? 'Click to select…'
       : multiple
         ? `${selectedAssets.length} selected`
         : selectedAssets[0]?.label ?? 'Selected'
+
+  const canUpload = allowUpload && Boolean(onImportCustom)
 
   return (
     <div className={`logo-picker ${dense ? 'dense' : 'roomy'}`}>
@@ -194,13 +233,37 @@ export function LogoPicker({
                 {'\u00D7'}
               </button>
             </div>
-            <input
-              className="search"
-              placeholder="Search logos…"
-              value={query}
-              autoFocus
-              onChange={(e) => setQuery(e.target.value)}
-            />
+            <div className="modal-toolbar">
+              <input
+                className="search"
+                placeholder="Search logos…"
+                value={query}
+                autoFocus
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              {canUpload && (
+                <>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    hidden
+                    accept=".pdf,.svg,.png,.jpg,.jpeg,application/pdf,image/svg+xml,image/png,image/jpeg"
+                    onChange={(e) => {
+                      void handleUpload(e.target.files?.[0] ?? null)
+                      e.target.value = ''
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={uploading}
+                    onClick={() => fileRef.current?.click()}
+                  >
+                    {uploading ? 'Uploading…' : 'Upload from PC'}
+                  </button>
+                </>
+              )}
+            </div>
             <div className="logo-grid modal-grid">
               {filtered.map((logo) => {
                 const active = draft.includes(logo.id)

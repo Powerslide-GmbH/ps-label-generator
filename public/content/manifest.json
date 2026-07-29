@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-23T15:27:06.775Z",
+  "generatedAt": "2026-07-29T09:05:56.988Z",
   "logos": [
     {
       "id": "PS_big_CMYK",
@@ -216,6 +216,36 @@
     }
   ],
   "models": [
+    {
+      "id": "box-accel-boot-only",
+      "name": "box-accel-boot-only.json",
+      "label": "box accel boot only",
+      "path": "content/models/box-accel-boot-only.json"
+    },
+    {
+      "id": "box-pds-dual-120",
+      "name": "box-pds-dual-120.json",
+      "label": "box pds dual 120",
+      "path": "content/models/box-pds-dual-120.json"
+    },
+    {
+      "id": "box-rocket-kids-120",
+      "name": "box-rocket-kids-120.json",
+      "label": "box rocket kids 120",
+      "path": "content/models/box-rocket-kids-120.json"
+    },
+    {
+      "id": "box-standard-140",
+      "name": "box-standard-140.json",
+      "label": "box standard 140",
+      "path": "content/models/box-standard-140.json"
+    },
+    {
+      "id": "box-triple-x-125",
+      "name": "box-triple-x-125.json",
+      "label": "box triple x 125",
+      "path": "content/models/box-triple-x-125.json"
+    },
     {
       "id": "hc-evo-pro-boot",
       "name": "hc-evo-pro-boot.json",

@@ -1,4 +1,12 @@
-import type { SizeChartTable, SizeGroupMode, SizeRow } from './types'
+import type {
+  SizeChartTable,
+  SizeGroupMode,
+  SizeRow,
+  SizeSystem,
+  SizeSystemKey,
+} from './types'
+import { SIZE_KEY_TO_SYSTEM, SIZE_SYSTEM_TO_KEY } from './boxConfig'
+import { DEFAULT_SIZE_SYSTEMS } from './types'
 
 export function detectMode(rows: SizeRow[]): SizeGroupMode {
   const hasRange = rows.some((r) => r.eu.includes('-') || r.mondo.includes('-'))
@@ -6,7 +14,7 @@ export function detectMode(rows: SizeRow[]): SizeGroupMode {
 }
 
 export function emptySizeRow(): SizeRow {
-  return { mondo: '', usM: '', usW: '', uk: '', eu: '' }
+  return { mondo: '', usM: '', usW: '', usKids: '', uk: '', eu: '' }
 }
 
 export function cloneSizeTable(table: SizeChartTable): SizeChartTable {
@@ -55,24 +63,36 @@ export function parseSizeChartSheet(
   }
 }
 
-export function sizeSystemsForRow(row: SizeRow): Array<keyof SizeRow> {
-  const keys: Array<keyof SizeRow> = ['mondo', 'usM', 'usW', 'uk', 'eu']
-  return keys.filter((k) => Boolean(row[k]))
+export function sizeSystemsForRow(
+  row: SizeRow,
+  enabled?: SizeSystem[],
+): SizeSystemKey[] {
+  const keys: SizeSystemKey[] = enabled?.length
+    ? enabled.map((s) => SIZE_SYSTEM_TO_KEY[s])
+    : (['mondo', 'usM', 'usW', 'uk', 'eu'] as SizeSystemKey[])
+  return keys.filter((k) => {
+    const v = row[k]
+    return Boolean(v && String(v).trim())
+  })
 }
 
-export function headersForRow(row: SizeRow): string[] {
-  const map: Record<keyof SizeRow, string> = {
-    mondo: 'MONDO',
-    usM: 'US M',
-    usW: 'US W',
-    uk: 'UK',
-    eu: 'EU',
-  }
-  return sizeSystemsForRow(row).map((k) => map[k])
+export function headersForRow(row: SizeRow, enabled?: SizeSystem[]): string[] {
+  return sizeSystemsForRow(row, enabled).map((k) => SIZE_KEY_TO_SYSTEM[k])
 }
 
-export function valuesForRow(row: SizeRow): string[] {
-  return sizeSystemsForRow(row).map((k) => row[k])
+export function valuesForRow(row: SizeRow, enabled?: SizeSystem[]): string[] {
+  return sizeSystemsForRow(row, enabled).map((k) => row[k] ?? '')
+}
+
+/** Systems to render on a box table: enabled ∩ systems that have any data. */
+export function systemsForBoxTable(
+  table: SizeChartTable,
+  enabled: SizeSystem[] = DEFAULT_SIZE_SYSTEMS,
+): SizeSystem[] {
+  return enabled.filter((sys) => {
+    const key = SIZE_SYSTEM_TO_KEY[sys]
+    return table.rows.some((r) => Boolean((r[key] ?? '').toString().trim()))
+  })
 }
 
 export function validateSizeTable(table: SizeChartTable): string[] {

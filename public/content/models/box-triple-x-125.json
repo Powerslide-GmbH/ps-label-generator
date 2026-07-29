@@ -1,0 +1,118 @@
+{
+  "id": "box-triple-x-125",
+  "name": "Triple X Adjustable 125x110",
+  "brandColorHex": "#416BE0",
+  "brandColorCmyk": {
+    "c": 0.76,
+    "m": 0.51,
+    "y": 0,
+    "k": 0
+  },
+  "brandWordmarkLogoId": "powerslide_logo_blue",
+  "badgeLogoId": "PS_small_CMYK",
+  "sizeChartId": "box-triple-x-125",
+  "mode": "dual",
+  "defaultTitle": [
+    {
+      "text": "TRIPLE X EVO ADJUSTABLE",
+      "bold": true
+    }
+  ],
+  "defaultSku": "904719",
+  "boxLogos": [
+    "PS_small_CMYK",
+    "seg_FIT"
+  ],
+  "sizeChartLogos": [
+    "PS_small_CMYK",
+    "seg_FIT"
+  ],
+  "materials": {
+    "upper": "label_syntetic_material",
+    "lining": "label_textile_material",
+    "sole": "label_syntetic_material"
+  },
+  "legalProfileId": "kids-class-b",
+  "outputs": {
+    "sizeLabelNormal": false,
+    "sizeLabelDouble": true,
+    "boxLabel": true,
+    "sizeChart": false
+  },
+  "defaultProductImageId": "908474_PS_Storm_80_Mango_2026_view01.tif",
+  "boxProductMode": "dual",
+  "boxProducts": [
+    {
+      "title": [
+        {
+          "text": "TRIPLE X EVO Dark Grey",
+          "bold": true
+        }
+      ],
+      "subtitle": "adj.",
+      "sku": "904719",
+      "imageName": "908474_PS_Storm_80_Mango_2026_view01.tif",
+      "imagePath": "content/products/908474_PS_Storm_80_Mango_2026_view01.tif"
+    },
+    {
+      "title": [
+        {
+          "text": "TRIPLE X EVO Hot Pink",
+          "bold": true
+        }
+      ],
+      "subtitle": "adj.",
+      "sku": "904720",
+      "imageName": "908482_Zoom_Pro_90_Sand_2026_view01.tif",
+      "imagePath": "content/products/908482_Zoom_Pro_90_Sand_2026_view01.tif"
+    }
+  ],
+  "boxDimensionsMm": {
+    "width": 125,
+    "height": 110
+  },
+  "enabledSizeSystems": [
+    "MONDO",
+    "US Kids",
+    "UK",
+    "EU"
+  ],
+  "boxTableFlow": {
+    "mode": "auto"
+  },
+  "legalDisplay": {
+    "showCompany": true,
+    "showPostalAddress": true,
+    "showPhoneFax": true,
+    "showWebEmail": true,
+    "showStandard": true,
+    "showClass": true,
+    "showWeight": true,
+    "showMadeIn": true
+  },
+  "pdfFontMode": "outlined",
+  "boxTextColorMode": "brand",
+  "sizeTable": {
+    "id": "box-triple-x-125",
+    "name": "Triple-X-Adjustable",
+    "mode": "dual",
+    "rows": [
+      {
+        "mondo": "194-213",
+        "usM": "",
+        "usW": "",
+        "usKids": "Jr. 13 - 3",
+        "uk": "Jr. 12 - 2",
+        "eu": "31-34"
+      },
+      {
+        "mondo": "213-234",
+        "usM": "",
+        "usW": "",
+        "usKids": "3-5.5",
+        "uk": "2-4.5",
+        "eu": "34-37"
+      }
+    ]
+  }
+}

@@ -3,7 +3,6 @@ import type { RichText } from '@/domain/types'
 import {
   applyBoldToSelection,
   mergeRuns,
-  plainText,
 } from '@/domain/richText'
 
 type Props = {
@@ -191,10 +190,6 @@ export function RichTextEditor({ value, onChange, label = 'Title' }: Props) {
         onInput={emitFromDom}
         onBlur={emitFromDom}
       />
-      <p className="hint">
-        Bold/regular here. Font size is set per output below (Size / Box / Chart).
-        {plainText(value) ? '' : ''}
-      </p>
     </div>
   )
 }

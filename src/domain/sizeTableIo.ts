@@ -4,14 +4,14 @@ import { detectMode, emptySizeRow } from './sizechart'
 
 export type SizeField = keyof SizeRow
 
-const FIELD_ORDER: SizeField[] = ['mondo', 'usM', 'usW', 'uk', 'eu']
-
 const FIELD_LABEL: Record<SizeField, string> = {
   mondo: 'MONDO',
   usM: 'US M',
   usW: 'US W',
+  usKids: 'US Kids',
   uk: 'UK',
   eu: 'EU',
+  legalProfileId: 'CLASS',
 }
 
 /** Normalize a header cell to a size field, or null if not recognized. */
@@ -36,13 +36,38 @@ export function matchSizeHeader(raw: string): SizeField | null {
     'us woman': 'usW',
     'us female': 'usW',
     'us ladies': 'usW',
+    'us kids': 'usKids',
+    uskids: 'usKids',
+    'us children': 'usKids',
+    'us child': 'usKids',
+    'us jr': 'usKids',
+    'us junior': 'usKids',
+    junior: 'usKids',
+    'jr': 'usKids',
+    kids: 'usKids',
     uk: 'uk',
     eu: 'eu',
     eur: 'eu',
     euro: 'eu',
     european: 'eu',
+    class: 'legalProfileId',
+    'legal class': 'legalProfileId',
+    'class a b': 'legalProfileId',
   }
   return aliases[n] ?? null
+}
+
+function normalizeClassValue(raw: string): string {
+  const n = raw.trim().toLowerCase()
+  if (!n) return ''
+  if (n === 'a' || n === 'class a' || n === 'class-a' || n === 'adult-class-a') {
+    return 'adult-class-a'
+  }
+  if (n === 'b' || n === 'class b' || n === 'class-b' || n === 'kids-class-b') {
+    return 'kids-class-b'
+  }
+  if (n === 'none' || n === '-') return 'none'
+  return raw.trim()
 }
 
 function cellText(v: unknown): string {
@@ -103,6 +128,19 @@ export function detectHeaderLayout(
   return null
 }
 
+function assignField(size: SizeRow, field: SizeField, v: string) {
+  if (field === 'legalProfileId') {
+    const id = normalizeClassValue(v)
+    if (id) size.legalProfileId = id
+    return
+  }
+  if (field === 'usKids') {
+    size.usKids = v
+    return
+  }
+  size[field] = v
+}
+
 function rowsFromColumnHeaders(matrix: string[][]): SizeRow[] {
   const fieldByRow = new Map<number, SizeField>()
   matrix.forEach((row, ri) => {
@@ -119,7 +157,7 @@ function rowsFromColumnHeaders(matrix: string[][]): SizeRow[] {
     for (const [ri, field] of fieldByRow) {
       const v = matrix[ri]?.[ci] ?? ''
       if (v) {
-        size[field] = v
+        assignField(size, field, v)
         any = true
       }
     }
@@ -144,7 +182,7 @@ function rowsFromRowHeaders(matrix: string[][]): SizeRow[] {
     for (const [ci, field] of colField) {
       const v = matrix[ri]?.[ci] ?? ''
       if (v) {
-        size[field] = v
+        assignField(size, field, v)
         any = true
       }
     }
@@ -190,13 +228,37 @@ export function parseSizeMatrix(
   }
 }
 
+function exportFields(table: SizeChartTable): SizeField[] {
+  const fields: SizeField[] = ['mondo', 'usM', 'usW', 'uk', 'eu']
+  const hasKids = table.rows.some((r) => (r.usKids ?? '').trim())
+  const hasClass = table.rows.some((r) => (r.legalProfileId ?? '').trim())
+  if (hasKids) {
+    const idx = fields.indexOf('usW')
+    fields.splice(idx + 1, 0, 'usKids')
+  }
+  if (hasClass) fields.push('legalProfileId')
+  return fields
+}
+
+function exportCell(row: SizeRow | undefined, field: SizeField): string {
+  if (!row) return ''
+  if (field === 'legalProfileId') {
+    const id = row.legalProfileId ?? ''
+    if (id === 'adult-class-a') return 'A'
+    if (id === 'kids-class-b') return 'B'
+    if (id === 'none') return 'none'
+    return id
+  }
+  return row[field] ?? ''
+}
+
 /** Export matrix with system names in column 1 (label layout). */
 export function sizeTableToMatrix(table: SizeChartTable): string[][] {
   const cols = Math.max(table.rows.length, 1)
-  return FIELD_ORDER.map((field) => {
+  return exportFields(table).map((field) => {
     const row = [FIELD_LABEL[field]]
     for (let i = 0; i < cols; i++) {
-      row.push(table.rows[i]?.[field] ?? '')
+      row.push(exportCell(table.rows[i], field))
     }
     return row
   })

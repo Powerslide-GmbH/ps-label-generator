@@ -1,0 +1,235 @@
+{
+  "id": "box-accel-boot-only",
+  "name": "ACCEL Boot Only",
+  "brandColorHex": "#416BE0",
+  "brandColorCmyk": {
+    "c": 0.76,
+    "m": 0.51,
+    "y": 0,
+    "k": 0
+  },
+  "brandWordmarkLogoId": "powerslide_logo_blue",
+  "badgeLogoId": "PS_small_CMYK",
+  "sizeChartId": "box-accel-boot-only",
+  "mode": "single",
+  "defaultTitle": [
+    {
+      "text": "ACCEL RACE Ti BOOT ONLY",
+      "bold": true
+    }
+  ],
+  "defaultSku": "904722",
+  "boxLogos": [
+    "PS_small_CMYK",
+    "seg_FIT"
+  ],
+  "sizeChartLogos": [
+    "PS_small_CMYK",
+    "seg_FIT"
+  ],
+  "materials": {
+    "upper": "label_syntetic_material",
+    "lining": "label_textile_material",
+    "sole": "label_syntetic_material"
+  },
+  "legalProfileId": "adult-class-a",
+  "outputs": {
+    "sizeLabelNormal": true,
+    "sizeLabelDouble": false,
+    "boxLabel": true,
+    "sizeChart": false
+  },
+  "defaultProductImageId": "908474_PS_Storm_80_Mango_2026_view01.tif",
+  "boxProductMode": "single",
+  "boxProducts": [
+    {
+      "title": [
+        {
+          "text": "ACCEL RACE Ti BOOT ONLY",
+          "bold": true
+        }
+      ],
+      "sku": "904722",
+      "imageName": "908474_PS_Storm_80_Mango_2026_view01.tif",
+      "imagePath": "content/products/908474_PS_Storm_80_Mango_2026_view01.tif"
+    }
+  ],
+  "boxDimensionsMm": {
+    "width": 140,
+    "height": 120
+  },
+  "enabledSizeSystems": [
+    "MONDO",
+    "US M",
+    "US W",
+    "US Kids",
+    "UK",
+    "EU"
+  ],
+  "boxTableFlow": {
+    "mode": "auto"
+  },
+  "legalDisplay": {
+    "showCompany": false,
+    "showPostalAddress": false,
+    "showPhoneFax": false,
+    "showWebEmail": false,
+    "showStandard": false,
+    "showClass": false,
+    "showWeight": false,
+    "showMadeIn": true
+  },
+  "pdfFontMode": "outlined",
+  "boxTextColorMode": "brand",
+  "sizeTable": {
+    "id": "box-accel-boot-only",
+    "name": "ACCEL-Boot-Only",
+    "mode": "single",
+    "rows": [
+      {
+        "mondo": "189",
+        "usM": "",
+        "usW": "",
+        "usKids": "Jr.12",
+        "uk": "Jr.11",
+        "eu": "30"
+      },
+      {
+        "mondo": "196",
+        "usM": "",
+        "usW": "",
+        "usKids": "Jr.13",
+        "uk": "Jr.12",
+        "eu": "31"
+      },
+      {
+        "mondo": "203",
+        "usM": "",
+        "usW": "",
+        "usKids": "1",
+        "uk": "Jr.13",
+        "eu": "32"
+      },
+      {
+        "mondo": "210",
+        "usM": "",
+        "usW": "",
+        "usKids": "2",
+        "uk": "1",
+        "eu": "33"
+      },
+      {
+        "mondo": "217",
+        "usM": "",
+        "usW": "",
+        "usKids": "3",
+        "uk": "2",
+        "eu": "34"
+      },
+      {
+        "mondo": "223",
+        "usM": "4",
+        "usW": "5",
+        "usKids": "",
+        "uk": "3",
+        "eu": "35"
+      },
+      {
+        "mondo": "230",
+        "usM": "5",
+        "usW": "6",
+        "usKids": "",
+        "uk": "4",
+        "eu": "36"
+      },
+      {
+        "mondo": "237",
+        "usM": "5.5",
+        "usW": "6.5",
+        "usKids": "",
+        "uk": "4.5",
+        "eu": "37"
+      },
+      {
+        "mondo": "244",
+        "usM": "6",
+        "usW": "7",
+        "usKids": "",
+        "uk": "5",
+        "eu": "38"
+      },
+      {
+        "mondo": "250",
+        "usM": "7",
+        "usW": "8",
+        "usKids": "",
+        "uk": "6",
+        "eu": "39"
+      },
+      {
+        "mondo": "257",
+        "usM": "7.5",
+        "usW": "8.5",
+        "usKids": "",
+        "uk": "6.5",
+        "eu": "40"
+      },
+      {
+        "mondo": "264",
+        "usM": "8",
+        "usW": "9",
+        "usKids": "",
+        "uk": "7",
+        "eu": "41"
+      },
+      {
+        "mondo": "270",
+        "usM": "9",
+        "usW": "10",
+        "usKids": "",
+        "uk": "8",
+        "eu": "42"
+      },
+      {
+        "mondo": "277",
+        "usM": "10",
+        "usW": "11",
+        "usKids": "",
+        "uk": "9",
+        "eu": "43"
+      },
+      {
+        "mondo": "283",
+        "usM": "10.5",
+        "usW": "",
+        "usKids": "",
+        "uk": "9.5",
+        "eu": "44"
+      },
+      {
+        "mondo": "290",
+        "usM": "11",
+        "usW": "",
+        "usKids": "",
+        "uk": "10",
+        "eu": "45"
+      },
+      {
+        "mondo": "297",
+        "usM": "12",
+        "usW": "",
+        "usKids": "",
+        "uk": "11",
+        "eu": "46"
+      },
+      {
+        "mondo": "303",
+        "usM": "12.5",
+        "usW": "",
+        "usKids": "",
+        "uk": "11.5",
+        "eu": "47"
+      }
+    ]
+  }
+}

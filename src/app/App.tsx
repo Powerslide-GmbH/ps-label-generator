@@ -21,18 +21,31 @@ import {
 import { plainText } from '@/domain/richText'
 import { exportBasename } from '@/domain/names'
 import { cloneSizeTable, createEmptySizeTable, validateSizeTable } from '@/domain/sizechart'
-import type { LabelDocument, ModelPreset, SizeChartTable } from '@/domain/types'
+import type {
+  BoxProductSlot,
+  LabelDocument,
+  LegalDisplayOptions,
+  ModelPreset,
+  SizeChartTable,
+  SizeSystem,
+} from '@/domain/types'
 import {
   DEFAULT_MATERIALS,
+  DEFAULT_SIZE_SYSTEMS,
   LOCATION_LOGO_IDS,
   MATERIAL_TYPE_LOGO_IDS,
   normalizeMaterials,
 } from '@/domain/types'
 import { parseModelJson } from '@/content/loadCatalog'
 import { LogoPicker } from '@/components/LogoPicker'
+import {
+  inlineLogoToAssetRef,
+  type InlineLogo,
+} from '@/domain/customLogo'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { OutputSelector } from '@/components/OutputSelector'
 import { SizeTableEditor } from '@/components/SizeTableEditor'
+import { BoxCompositionControls } from '@/components/BoxCompositionControls'
 import { SceneSvg } from '@/templates/SceneSvg'
 import {
   buildBoxLabelScene,
@@ -42,9 +55,64 @@ import {
 import { buildExports } from '@/export/pdfExport'
 import { downloadExports } from '@/export/download'
 import { decodeImageFile, canvasToSquare } from '@/export/imageDecode'
+import {
+  emptyBoxProductSlot,
+  syncPrimaryProductFields,
+} from '@/domain/boxConfig'
+import { hexToRgb, rgbToCmykApprox } from '@/export/cmyk'
+import { parseAppUrl, syncAppUrl, type AppTab } from '@/app/urlState'
 import './App.css'
 
-type Tab = 'size-normal' | 'size-double' | 'box' | 'sizechart'
+type Tab = AppTab
+
+function syncBoxPrimary(
+  doc: LabelDocument,
+  patch: Partial<Pick<LabelDocument, 'sku' | 'title' | 'productImagePath' | 'productImageName'>>,
+): LabelDocument {
+  const products = [...(doc.boxProducts ?? [])]
+  const primary = products[0] ?? emptyBoxProductSlot()
+  products[0] = {
+    ...primary,
+    sku: patch.sku ?? primary.sku,
+    title: patch.title ? structuredClone(patch.title) : primary.title,
+    imagePath:
+      patch.productImagePath !== undefined
+        ? patch.productImagePath
+        : primary.imagePath,
+    imageName:
+      patch.productImageName !== undefined
+        ? patch.productImageName
+        : primary.imageName,
+  }
+  return {
+    ...doc,
+    ...patch,
+    boxProducts: products,
+  }
+}
+
+function ensureBoxProducts(doc: LabelDocument): BoxProductSlot[] {
+  const products = [...(doc.boxProducts ?? [])]
+  if (!products[0]) {
+    products[0] = {
+      ...emptyBoxProductSlot('', doc.sku),
+      title: structuredClone(doc.title),
+      imagePath: doc.productImagePath,
+      imageName: doc.productImageName,
+    }
+  }
+  return products
+}
+
+function applyBrandHex(doc: LabelDocument, hex: string): LabelDocument {
+  const brandColorHex = normalizeHex(hex, doc.brandColorHex)
+  const { r, g, b } = hexToRgb(brandColorHex)
+  return {
+    ...doc,
+    brandColorHex,
+    brandColorCmyk: rgbToCmykApprox(r, g, b),
+  }
+}
 
 async function resolveProductPreview(pathOrUrl: string): Promise<string> {
   const lower = pathOrUrl.toLowerCase()
@@ -54,6 +122,26 @@ async function resolveProductPreview(pathOrUrl: string): Promise<string> {
   const blob = await res.blob()
   const canvas = canvasToSquare(await decodeImageFile(blob))
   return canvas.toDataURL('image/jpeg', 0.9)
+}
+
+function productSourceUrl(
+  imagePath: string | null | undefined,
+  imageName: string | null | undefined,
+): string | null {
+  if (imagePath) {
+    if (
+      imagePath.startsWith('data:') ||
+      imagePath.startsWith('blob:') ||
+      imagePath.startsWith('http') ||
+      imagePath.startsWith('./')
+    ) {
+      return imagePath
+    }
+    if (imagePath.startsWith('content/')) return contentUrl(imagePath)
+    return contentUrl(imagePath)
+  }
+  if (imageName) return contentUrl(`content/products/${imageName}`)
+  return null
 }
 
 export default function App() {
@@ -68,9 +156,33 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [productPreviewUrl, setProductPreviewUrl] = useState<string | null>(null)
+  const [productPreviewUrls, setProductPreviewUrls] = useState<(string | null)[]>([
+    null,
+    null,
+  ])
   const [sizeWordmarkUrl, setSizeWordmarkUrl] = useState<string | null>(null)
   const modelFileRef = useRef<HTMLInputElement>(null)
   const tintUrlRef = useRef<string | null>(null)
+
+  async function resolveDualProductPreviews(slots: LabelDocument['boxProducts']) {
+    const results: (string | null)[] = [null, null]
+    await Promise.all(
+      [0, 1].map(async (i) => {
+        const slot = slots[i]
+        if (!slot) return
+        const src = productSourceUrl(slot.imagePath, slot.imageName)
+        if (!src) return
+        try {
+          results[i] = await resolveProductPreview(src)
+        } catch {
+          results[i] = src
+        }
+      }),
+    )
+    setProductPreviewUrls(results)
+    if (results[0]) setProductPreviewUrl(results[0])
+    return results
+  }
 
   useEffect(() => {
     loadCatalog('./')
@@ -79,7 +191,11 @@ export default function App() {
         const localUsers = loadUserPresets()
         setUserPresets(localUsers)
         const savedTable = loadWorkingTable()
-        const first = c.presets[0]
+        const url = parseAppUrl()
+        const fromUrl = url.preset
+          ? [...c.presets, ...localUsers].find((p) => p.id === url.preset)
+          : undefined
+        const first = fromUrl ?? c.presets[0]
         if (first) {
           const next = documentFromPreset(first, DEFAULT_LEGAL)
           const table = sizeTableFromPreset(first, c.sizeCharts)
@@ -87,26 +203,22 @@ export default function App() {
             savedTable?.id === table.id ? savedTable : table,
           )
           if (first.defaultProductImageId) {
-            const url = contentUrl(
+            const productUrl = contentUrl(
               `content/products/${first.defaultProductImageId}`,
             )
-            next.productImagePath = url
+            next.productImagePath = productUrl
             next.productImageName = first.defaultProductImageId
-            void resolveProductPreview(url)
-              .then((preview) => {
-                setProductPreviewUrl(preview)
-                setDoc((d) => ({ ...d, productImagePath: preview }))
-              })
-              .catch(() => undefined)
           }
-          setDoc(next)
-          setTab(
-            first.outputs.sizeLabelNormal
-              ? 'size-normal'
-              : first.outputs.sizeLabelDouble
-                ? 'size-double'
-                : 'box',
-          )
+          void resolveDualProductPreviews(next.boxProducts).catch(() => undefined)
+          setDoc({ ...next, boxTableFlow: { mode: 'auto' } })
+          const defaultTab: Tab = first.outputs.sizeLabelNormal
+            ? 'size-normal'
+            : first.outputs.sizeLabelDouble
+              ? 'size-double'
+              : 'box'
+          const nextTab = url.tab ?? defaultTab
+          setTab(nextTab)
+          syncAppUrl({ preset: first.id, tab: nextTab }, 'replace')
         } else if (savedTable) {
           setWorkingTable(savedTable)
         }
@@ -130,6 +242,12 @@ export default function App() {
     saveWorkingTable(workingTable)
   }, [workingTable])
 
+  // Shareable URL: sync only preset + tab (never on keystroke field edits).
+  useEffect(() => {
+    if (!catalog) return
+    syncAppUrl({ preset: doc.presetId, tab }, 'replace')
+  }, [catalog, doc.presetId, tab])
+
   const allPresets = useMemo(
     () => [...(catalog?.presets ?? []), ...userPresets],
     [catalog, userPresets],
@@ -143,7 +261,10 @@ export default function App() {
   }, [allPresets, catalog, doc.presetId, doc.sizeChartId])
 
   const logoHref = (id: string | null | undefined) => {
-    if (!id || !catalog) return ''
+    if (!id) return ''
+    const custom = doc.customLogos.find((l) => l.id === id)
+    if (custom) return custom.data
+    if (!catalog) return ''
     const asset = catalog.logoById.get(id)
     return asset ? contentUrl(asset.path) : ''
   }
@@ -203,16 +324,38 @@ export default function App() {
   const scenes = useMemo(() => {
     const table = workingTable
     if (!table.rows.length) return null
-    const boxLogos = doc.boxLogos
-      .map((id) => {
-        const asset = catalog?.logoById.get(id)
-        const href = logoHref(id)
-        if (!href) return null
-        return { href, aspectRatio: asset?.aspectRatio }
+    const boxLogos: Array<{ href: string; aspectRatio?: number }> = []
+    const logoIds =
+      doc.boxLogoRefs.length > 0
+        ? doc.boxLogoRefs.map((ref) =>
+            ref.kind === 'inline' ? ref.id : ref.id,
+          )
+        : doc.boxLogos
+    for (const id of logoIds) {
+      const custom = doc.customLogos.find((l) => l.id === id)
+      const asset = catalog?.logoById.get(id)
+      const href =
+        custom?.data ??
+        (asset ? contentUrl(asset.path) : logoHref(id))
+      if (!href) continue
+      boxLogos.push({
+        href,
+        aspectRatio: custom?.aspectRatio ?? asset?.aspectRatio,
       })
-      .filter((x): x is { href: string; aspectRatio?: number } => Boolean(x))
+    }
     const chartLogos = doc.sizeChartLogos.map(logoHref).filter(Boolean)
     const product = productPreviewUrl || doc.productImagePath
+    const dualHrefs: (string | null)[] = [
+      productPreviewUrls[0] || product || productSourceUrl(
+        doc.boxProducts[0]?.imagePath,
+        doc.boxProducts[0]?.imageName,
+      ),
+      productPreviewUrls[1] ||
+        productSourceUrl(
+          doc.boxProducts[1]?.imagePath,
+          doc.boxProducts[1]?.imageName,
+        ),
+    ]
     const colorWordmark = logoHref(doc.brandWordmarkLogoId) || undefined
     const assets = {
       // Color wordmark as selected (box + size-sheet footer)
@@ -228,6 +371,7 @@ export default function App() {
       materialPairs,
       classLogoHref: logoHref('label_class') || undefined,
       showPrintGuides,
+      productHrefs: dualHrefs,
     }
     return {
       normal: buildSizeLabelScene(doc, table, false, assets),
@@ -236,7 +380,25 @@ export default function App() {
       sizechart: buildSizeChartScene(doc, table, chartLogos),
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc, workingTable, productPreviewUrl, catalog, sizeWordmarkUrl, materialPairs, showPrintGuides])
+  }, [doc, workingTable, productPreviewUrl, productPreviewUrls, catalog, sizeWordmarkUrl, materialPairs, showPrintGuides])
+
+  function kidsEnabledSystems(kids: boolean): SizeSystem[] {
+    const base = [...DEFAULT_SIZE_SYSTEMS]
+    if (!kids) return base
+    const afterUsW = base.indexOf('US W')
+    if (afterUsW < 0) return [...base, 'US Kids']
+    return [...base.slice(0, afterUsW + 1), 'US Kids', ...base.slice(afterUsW + 1)]
+  }
+
+  function onWorkingTableChange(table: SizeChartTable) {
+    setWorkingTable(table)
+    setDoc((d) => ({
+      ...d,
+      mode: table.mode,
+      sizeChartFootnote:
+        table.mode === 'single' ? 'Single sizes' : 'Range sizes',
+    }))
+  }
 
   function applyPreset(id: string) {
     const preset = allPresets.find((p) => p.id === id)
@@ -246,36 +408,131 @@ export default function App() {
     setWorkingTable(table)
     next.mode = table.mode
     next.sizeChartId = table.id
+    next.boxTableFlow = { mode: 'auto' }
     next.sizeChartFootnote =
       table.mode === 'single' ? 'Single sizes' : 'Range sizes'
     if (preset.defaultProductImageId) {
       const url = contentUrl(`content/products/${preset.defaultProductImageId}`)
       next.productImagePath = url
       next.productImageName = preset.defaultProductImageId
-      void resolveProductPreview(url).then((preview) => {
-        setProductPreviewUrl(preview)
-        setDoc((d) => ({ ...d, productImagePath: preview }))
-      })
     } else {
       setProductPreviewUrl(null)
+      setProductPreviewUrls([null, null])
     }
     setDoc(next)
+    void resolveDualProductPreviews(next.boxProducts).catch(() => undefined)
   }
 
-  async function onProductFile(file: File | null) {
+  async function onProductFile(file: File | null, slotIndex = 0) {
     if (!file) return
     try {
       const canvas = canvasToSquare(await decodeImageFile(file))
       const url = canvas.toDataURL('image/jpeg', 0.92)
-      setProductPreviewUrl(url)
-      setDoc((d) => ({
-        ...d,
-        productImagePath: url,
-        productImageName: file.name,
-      }))
+      setDoc((d) => {
+        const products = ensureBoxProducts(d)
+        while (products.length <= slotIndex) {
+          products.push(emptyBoxProductSlot(`PRODUCT ${products.length + 1}`, ''))
+        }
+        products[slotIndex] = {
+          ...products[slotIndex],
+          imagePath: url,
+          imageName: file.name,
+        }
+        if (slotIndex === 0) {
+          setProductPreviewUrl(url)
+          return {
+            ...d,
+            productImagePath: url,
+            productImageName: file.name,
+            boxProducts: products,
+          }
+        }
+        return { ...d, boxProducts: products }
+      })
+      setProductPreviewUrls((prev) => {
+        const next: [string | null, string | null] = [prev[0] ?? null, prev[1] ?? null]
+        next[slotIndex] = url
+        return next
+      })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Image decode failed')
     }
+  }
+
+  function setBoxProductMode(mode: 'single' | 'dual') {
+    if (mode === doc.boxProductMode) return
+    if (mode === 'dual') {
+      const next = ensureBoxProducts(doc)
+      next[0] = {
+        ...next[0],
+        title: structuredClone(doc.title),
+        sku: doc.sku,
+        imagePath: doc.productImagePath,
+        imageName: doc.productImageName,
+      }
+      if (!next[1]) next.push(emptyBoxProductSlot('PRODUCT 2', ''))
+      setDoc({
+        ...doc,
+        boxProductMode: 'dual',
+        boxProducts: next,
+        boxTableFlow: { mode: 'auto' },
+      })
+      return
+    }
+    if (
+      doc.boxProductMode === 'dual' &&
+      !window.confirm('Switch to Single and discard Product 2?')
+    ) {
+      return
+    }
+    setDoc(
+      syncPrimaryProductFields({
+        ...doc,
+        boxProductMode: 'single',
+        boxProducts: [ensureBoxProducts(doc)[0]],
+        boxTableFlow: { mode: 'auto' },
+      }),
+    )
+  }
+
+  function patchBoxProduct(
+    index: number,
+    partial: Partial<BoxProductSlot>,
+  ) {
+    const products = ensureBoxProducts(doc)
+    while (products.length <= index) {
+      products.push(emptyBoxProductSlot(`PRODUCT ${products.length + 1}`, ''))
+    }
+    products[index] = { ...products[index], ...partial }
+    if (partial.title) {
+      products[index].title = structuredClone(partial.title)
+    }
+    if (index === 0) {
+      // Dual: keep shared model/range title on doc.title; only sync sku/image.
+      if (doc.boxProductMode === 'dual') {
+        setDoc({
+          ...doc,
+          boxProducts: products,
+          sku: products[0].sku,
+          productImagePath: products[0].imagePath,
+          productImageName: products[0].imageName,
+        })
+        return
+      }
+      setDoc(
+        syncBoxPrimary(
+          { ...doc, boxProducts: products },
+          {
+            sku: products[0].sku,
+            title: products[0].title,
+            productImagePath: products[0].imagePath,
+            productImageName: products[0].imageName,
+          },
+        ),
+      )
+      return
+    }
+    setDoc({ ...doc, boxProducts: products, boxProductMode: 'dual' })
   }
 
   function saveAsPreset() {
@@ -320,6 +577,7 @@ export default function App() {
       setWorkingTable(table)
       nextDoc.mode = table.mode
       nextDoc.sizeChartId = table.id
+      nextDoc.boxTableFlow = { mode: 'auto' }
       nextDoc.sizeChartFootnote =
         table.mode === 'single' ? 'Single sizes' : 'Range sizes'
       if (preset.defaultProductImageId) {
@@ -328,12 +586,9 @@ export default function App() {
         )
         nextDoc.productImagePath = url
         nextDoc.productImageName = preset.defaultProductImageId
-        void resolveProductPreview(url).then((preview) => {
-          setProductPreviewUrl(preview)
-          setDoc((d) => ({ ...d, productImagePath: preview }))
-        })
       }
       setDoc(nextDoc)
+      void resolveDualProductPreviews(nextDoc.boxProducts).catch(() => undefined)
       setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Import failed')
@@ -360,6 +615,8 @@ export default function App() {
       scene: (typeof scenes)['box']
       filename: string
       pdfMode?: 'k-only' | 'cmyk'
+      pdfFontMode?: typeof doc.pdfFontMode
+      textColorMode?: typeof doc.boxTextColorMode
     }[] = []
     if (doc.outputs.sizeLabelNormal) {
       list.push({
@@ -367,6 +624,8 @@ export default function App() {
         scene: scenes.normal,
         filename: `${exportBasename(doc.sku, title, 'size-label-normal')}.pdf`,
         pdfMode: 'k-only',
+        pdfFontMode: doc.pdfFontMode,
+        textColorMode: 'pure-k',
       })
     }
     if (doc.outputs.sizeLabelDouble) {
@@ -375,6 +634,8 @@ export default function App() {
         scene: scenes.double,
         filename: `${exportBasename(doc.sku, title, 'size-label-double')}.pdf`,
         pdfMode: 'k-only',
+        pdfFontMode: doc.pdfFontMode,
+        textColorMode: 'pure-k',
       })
     }
     if (doc.outputs.boxLabel) {
@@ -382,7 +643,10 @@ export default function App() {
         key: 'box',
         scene: scenes.box,
         filename: `${exportBasename(doc.sku, title, 'box-label')}.pdf`,
+        // Keep CMYK page; pure-k text fills forced via textColorMode / toPdfColor.
         pdfMode: 'cmyk',
+        pdfFontMode: doc.pdfFontMode,
+        textColorMode: doc.boxTextColorMode,
       })
     }
     if (doc.outputs.sizeChart) {
@@ -432,6 +696,18 @@ export default function App() {
   const materialLogoList = catalog.manifest.logos.filter((l) =>
     (MATERIAL_TYPE_LOGO_IDS as readonly string[]).includes(l.id),
   )
+  const customLogoAssets = doc.customLogos.map(inlineLogoToAssetRef)
+  const allLogos = [...catalog.manifest.logos, ...customLogoAssets]
+  const materialLogosWithCustom = [...materialLogoList, ...customLogoAssets]
+
+  function importCustomLogo(logo: InlineLogo) {
+    setDoc((prev) => ({
+      ...prev,
+      customLogos: prev.customLogos.some((c) => c.id === logo.id)
+        ? prev.customLogos
+        : [...prev.customLogos, logo],
+    }))
+  }
 
   return (
     <div className="app">
@@ -442,9 +718,33 @@ export default function App() {
             Local tool · JSON catalog · CMYK PDF · size chart JPG
           </p>
         </div>
-        <button className="primary" disabled={busy} onClick={exportSelected}>
-          {busy ? 'Exporting...' : 'Export selected'}
-        </button>
+        <div className="header-export top-actions">
+          <label className="pdf-font-mode">
+            <span>PDF fonts</span>
+            <select
+              value={doc.pdfFontMode}
+              onChange={(e) =>
+                setDoc({
+                  ...doc,
+                  pdfFontMode:
+                    e.target.value === 'editable' ? 'editable' : 'outlined',
+                })
+              }
+            >
+              <option value="outlined">Outlined</option>
+              <option value="editable">Editable</option>
+            </select>
+          </label>
+          <OutputSelector
+            dense
+            variant="header"
+            value={doc.outputs}
+            onChange={(outputs) => setDoc({ ...doc, outputs })}
+          />
+          <button className="primary" disabled={busy} onClick={exportSelected}>
+            {busy ? 'Exporting...' : 'Export selected'}
+          </button>
+        </div>
       </header>
 
       {error && <div className="banner error">{error}</div>}
@@ -485,27 +785,175 @@ export default function App() {
                 onChange={(e) => importModelJson(e.target.files?.[0] ?? null)}
               />
             </div>
-            <p className="hint">
-              A preset includes branding, outputs and the size table. Browser save =
-              localStorage only. To publish: Export JSON →{' '}
-              <code>public/content/models/</code> →{' '}
-              <code>npm run content:manifest</code>.
-            </p>
           </section>
 
           <section>
             <h2>Content</h2>
+
             <div className="field">
-              <label>SKU / Article no.</label>
-              <input
-                value={doc.sku}
-                onChange={(e) => setDoc({ ...doc, sku: e.target.value })}
-              />
+              <label>Products</label>
+              <div className="chip-row composition-chips">
+                <button
+                  type="button"
+                  className={doc.boxProductMode === 'single' ? 'active' : undefined}
+                  onClick={() => setBoxProductMode('single')}
+                >
+                  Single
+                </button>
+                <button
+                  type="button"
+                  className={doc.boxProductMode === 'dual' ? 'active' : undefined}
+                  onClick={() => setBoxProductMode('dual')}
+                >
+                  Dual
+                </button>
+              </div>
             </div>
-            <RichTextEditor
-              value={doc.title}
-              onChange={(title) => setDoc({ ...doc, title })}
-            />
+
+            <div className="field brand-color-field">
+              <label>Brand color</label>
+              <div className="brand-color-control">
+                <label className="brand-swatch-btn" title={doc.brandColorHex}>
+                  <span
+                    className="brand-swatch"
+                    style={{ background: doc.brandColorHex }}
+                    aria-hidden
+                  />
+                  <input
+                    type="color"
+                    value={normalizeHex(doc.brandColorHex)}
+                    onChange={(e) => setDoc(applyBrandHex(doc, e.target.value))}
+                    aria-label="Brand color picker"
+                  />
+                </label>
+                <input
+                  className="hex-input"
+                  value={doc.brandColorHex}
+                  onChange={(e) => {
+                    const raw = e.target.value
+                    setDoc({
+                      ...doc,
+                      brandColorHex: raw.startsWith('#')
+                        ? raw.toUpperCase()
+                        : `#${raw}`.toUpperCase(),
+                    })
+                  }}
+                  onBlur={(e) => setDoc(applyBrandHex(doc, e.target.value))}
+                  placeholder="#416BE0"
+                  spellCheck={false}
+                  aria-label="Brand color hex"
+                />
+              </div>
+              <label className="check-inline brand-text-check">
+                <input
+                  type="checkbox"
+                  checked={doc.boxTextColorMode === 'brand'}
+                  onChange={(e) =>
+                    setDoc({
+                      ...doc,
+                      boxTextColorMode: e.target.checked ? 'brand' : 'pure-k',
+                    })
+                  }
+                />
+                Color texts with brand color
+              </label>
+            </div>
+
+            {doc.boxProductMode === 'dual' ? (
+              <div className="dual-content-grid">
+                {[0, 1].map((index) => {
+                  const slot =
+                    doc.boxProducts[index] ??
+                    emptyBoxProductSlot(`PRODUCT ${index + 1}`, '')
+                  return (
+                    <div key={index} className="product-slot-fields">
+                      <h3>Product {index + 1}</h3>
+                      <div className="field">
+                        <label>Article / SKU {index + 1}</label>
+                        <input
+                          value={slot.sku}
+                          onChange={(e) =>
+                            patchBoxProduct(index, { sku: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Title {index + 1}</label>
+                        <RichTextEditor
+                          value={slot.title}
+                          onChange={(title) => patchBoxProduct(index, { title })}
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Subtitle {index + 1} (optional)</label>
+                        <input
+                          value={slot.subtitle ?? ''}
+                          onChange={(e) =>
+                            patchBoxProduct(index, {
+                              subtitle: e.target.value,
+                            })
+                          }
+                          placeholder="e.g. BOOT ONLY, adj."
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Product image {index + 1}</label>
+                        <input
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.tif,.tiff,image/*"
+                          onChange={(e) =>
+                            void onProductFile(e.target.files?.[0] ?? null, index)
+                          }
+                        />
+                        {slot.imageName && (
+                          <p className="hint">Current: {slot.imageName}</p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <>
+                <div className="field">
+                  <label>SKU / Article no.</label>
+                  <input
+                    value={doc.sku}
+                    onChange={(e) =>
+                      setDoc(syncBoxPrimary(doc, { sku: e.target.value }))
+                    }
+                  />
+                </div>
+                <RichTextEditor
+                  value={doc.title}
+                  onChange={(title) => setDoc(syncBoxPrimary(doc, { title }))}
+                />
+                <div className="field">
+                  <label>Subtitle (optional)</label>
+                  <input
+                    value={doc.boxProducts[0]?.subtitle ?? ''}
+                    onChange={(e) =>
+                      patchBoxProduct(0, { subtitle: e.target.value })
+                    }
+                    placeholder="e.g. BOOT ONLY"
+                  />
+                </div>
+                <div className="field">
+                  <label>Product image (JPG / PNG / TIF)</label>
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.tif,.tiff,image/*"
+                    onChange={(e) =>
+                      void onProductFile(e.target.files?.[0] ?? null, 0)
+                    }
+                  />
+                  {doc.productImageName && (
+                    <p className="hint">Current: {doc.productImageName}</p>
+                  )}
+                </div>
+              </>
+            )}
+
             <div className="field">
               <label>Title size per output</label>
               <div className="title-sizes">
@@ -522,7 +970,8 @@ export default function App() {
                         ...doc,
                         titleSizes: {
                           ...doc.titleSizes,
-                          sizeLabel: Number(e.target.value) || doc.titleSizes.sizeLabel,
+                          sizeLabel:
+                            Number(e.target.value) || doc.titleSizes.sizeLabel,
                         },
                       })
                     }
@@ -542,7 +991,8 @@ export default function App() {
                         titleSizes: {
                           ...doc.titleSizes,
                           sizeLabelDouble:
-                            Number(e.target.value) || doc.titleSizes.sizeLabelDouble,
+                            Number(e.target.value) ||
+                            doc.titleSizes.sizeLabelDouble,
                         },
                       })
                     }
@@ -580,7 +1030,8 @@ export default function App() {
                         ...doc,
                         titleSizes: {
                           ...doc.titleSizes,
-                          sizeChart: Number(e.target.value) || doc.titleSizes.sizeChart,
+                          sizeChart:
+                            Number(e.target.value) || doc.titleSizes.sizeChart,
                         },
                       })
                     }
@@ -588,72 +1039,29 @@ export default function App() {
                 </label>
               </div>
             </div>
-            <div className="field">
-              <label>Product image (JPG / PNG / TIF)</label>
-              <input
-                type="file"
-                accept=".jpg,.jpeg,.png,.tif,.tiff,image/*"
-                onChange={(e) => onProductFile(e.target.files?.[0] ?? null)}
-              />
-              {doc.productImageName && (
-                <p className="hint">
-                  Current: {doc.productImageName} (designers normally import their own)
-                </p>
-              )}
-            </div>
-            <div className="field">
-              <label>Brand color</label>
-              <div className="brand-color-row">
-                <span
-                  className="brand-swatch"
-                  style={{ background: doc.brandColorHex }}
-                  title={doc.brandColorHex}
-                />
-                <input
-                  type="color"
-                  value={normalizeHex(doc.brandColorHex)}
-                  onChange={(e) =>
-                    setDoc({ ...doc, brandColorHex: normalizeHex(e.target.value) })
-                  }
-                  aria-label="Brand color picker"
-                />
-                <input
-                  className="hex-input"
-                  value={doc.brandColorHex}
-                  onChange={(e) => {
-                    const raw = e.target.value
-                    setDoc({
-                      ...doc,
-                      brandColorHex: raw.startsWith('#') ? raw.toUpperCase() : `#${raw}`.toUpperCase(),
-                    })
-                  }}
-                  onBlur={(e) =>
-                    setDoc({
-                      ...doc,
-                      brandColorHex: normalizeHex(e.target.value, doc.brandColorHex),
-                    })
-                  }
-                  placeholder="#416BE0"
-                  spellCheck={false}
-                />
-              </div>
-            </div>
           </section>
+
+          <BoxCompositionControls
+            doc={doc}
+            onChange={setDoc}
+            tableWarning={scenes?.box?.tableWarning}
+            overflow={scenes?.box?.overflow}
+            layoutStrategy={scenes?.box?.layoutStrategy}
+          />
 
           <section>
             <h2>Sizes</h2>
             <SizeTableEditor
               value={workingTable}
               catalogTable={catalogTable}
-              onChange={setWorkingTable}
-              onModeChange={(mode) =>
+              kids={doc.enabledSizeSystems.includes('US Kids')}
+              onKidsChange={(kids) =>
                 setDoc({
                   ...doc,
-                  mode,
-                  sizeChartFootnote:
-                    mode === 'single' ? 'Single sizes' : 'Range sizes',
+                  enabledSizeSystems: kidsEnabledSystems(kids),
                 })
               }
+              onChange={onWorkingTableChange}
             />
           </section>
 
@@ -662,48 +1070,56 @@ export default function App() {
             <div className="logo-stack">
               <LogoPicker
                 label="Brand wordmark (horizontal, in color)"
-                logos={catalog.manifest.logos}
+                logos={allLogos}
                 selected={doc.brandWordmarkLogoId ? [doc.brandWordmarkLogoId] : []}
                 multiple={false}
-                hint="Select the colored logo. Box uses it as-is; size-label pieces force it to black."
+                onImportCustom={importCustomLogo}
                 onChange={(ids) =>
                   setDoc({ ...doc, brandWordmarkLogoId: ids[0] ?? null })
                 }
               />
               <LogoPicker
                 label="Page badge (circular PS)"
-                logos={catalog.manifest.logos}
+                logos={allLogos}
                 selected={doc.badgeLogoId ? [doc.badgeLogoId] : []}
                 multiple={false}
-                hint="Small circular logo on size-label sheet header."
+                onImportCustom={importCustomLogo}
                 onChange={(ids) =>
                   setDoc({ ...doc, badgeLogoId: ids[0] ?? null })
                 }
               />
               <LogoPicker
                 label="Box logos (under title)"
-                logos={catalog.manifest.logos}
+                logos={allLogos}
                 selected={doc.boxLogos}
-                hint="Circular badges under SKU on the box (e.g. PS + FIT)."
-                onChange={(boxLogos) => setDoc({ ...doc, boxLogos })}
+                onImportCustom={importCustomLogo}
+                onChange={(boxLogos) =>
+                  setDoc((prev) => ({
+                    ...prev,
+                    boxLogos,
+                    boxLogoRefs: boxLogos.map((id) => {
+                      const custom = prev.customLogos.find((c) => c.id === id)
+                      return custom ?? { kind: 'catalog' as const, id }
+                    }),
+                  }))
+                }
               />
               <LogoPicker
                 label="Size chart logos"
-                logos={catalog.manifest.logos}
+                logos={allLogos}
                 selected={doc.sizeChartLogos}
+                onImportCustom={importCustomLogo}
                 onChange={(sizeChartLogos) => setDoc({ ...doc, sizeChartLogos })}
               />
             </div>
-            <p className="hint materials-hint">
-              Materials — location icons are fixed; pick the material type for each
-            </p>
             <div className="materials-grid">
               <LogoPicker
                 label="Upper"
                 dense
-                logos={materialLogoList}
+                logos={materialLogosWithCustom}
                 selected={doc.materials.upper ? [doc.materials.upper] : []}
                 multiple={false}
+                onImportCustom={importCustomLogo}
                 onChange={(ids) =>
                   setDoc({
                     ...doc,
@@ -717,9 +1133,10 @@ export default function App() {
               <LogoPicker
                 label="Liner"
                 dense
-                logos={materialLogoList}
+                logos={materialLogosWithCustom}
                 selected={doc.materials.lining ? [doc.materials.lining] : []}
                 multiple={false}
+                onImportCustom={importCustomLogo}
                 onChange={(ids) =>
                   setDoc({
                     ...doc,
@@ -733,9 +1150,10 @@ export default function App() {
               <LogoPicker
                 label="Sole"
                 dense
-                logos={materialLogoList}
+                logos={materialLogosWithCustom}
                 selected={doc.materials.sole ? [doc.materials.sole] : []}
                 multiple={false}
+                onImportCustom={importCustomLogo}
                 onChange={(ids) =>
                   setDoc({
                     ...doc,
@@ -749,14 +1167,46 @@ export default function App() {
             </div>
           </section>
 
-          <section>
-            <h2>Outputs</h2>
-            <OutputSelector
-              value={doc.outputs}
-              onChange={(outputs) => setDoc({ ...doc, outputs })}
-            />
+          <section className="legal-section">
+            <h2>Legal</h2>
+            <div className="field">
+              <label>Show on box</label>
+              <div className="checks">
+                {(
+                  [
+                    ['showCompany', 'Company'],
+                    ['showPostalAddress', 'Address'],
+                    ['showPhoneFax', 'Phone / Fax'],
+                    ['showWebEmail', 'Web / Email'],
+                    ['showStandard', 'Standard'],
+                    ['showClass', 'Class'],
+                    ['showWeight', 'Weight'],
+                    ['showMadeIn', 'Made in'],
+                  ] as const satisfies ReadonlyArray<
+                    readonly [keyof LegalDisplayOptions, string]
+                  >
+                ).map(([key, label]) => (
+                  <label key={key}>
+                    <input
+                      type="checkbox"
+                      checked={doc.legalDisplay[key]}
+                      onChange={(e) =>
+                        setDoc({
+                          ...doc,
+                          legalDisplay: {
+                            ...doc.legalDisplay,
+                            [key]: e.target.checked,
+                          },
+                        })
+                      }
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
             <details>
-              <summary>Legal text (advanced)</summary>
+              <summary>Advanced legal fields</summary>
               <div className="field">
                 <label>Class / weight</label>
                 <input
@@ -821,6 +1271,20 @@ export default function App() {
               </label>
             )}
           </div>
+          {tab === 'box' &&
+            (scenes?.box?.tableWarning ||
+              (scenes?.box?.overflow && scenes.box.overflow.length > 0)) && (
+              <ul className="warn-list preview-warns">
+                {scenes.box.tableWarning && (
+                  <li>{scenes.box.tableWarning}</li>
+                )}
+                {scenes.box.overflow?.map((o) => (
+                  <li key={`${o.block}-${o.message}`}>
+                    {o.block}: {o.message}
+                  </li>
+                ))}
+              </ul>
+            )}
           <div className="preview-stage">
             {activeScene ? (
               <SceneSvg scene={activeScene} className="scene" />

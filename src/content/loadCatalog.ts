@@ -8,6 +8,7 @@ import type {
   SizeRow,
 } from '@/domain/types'
 import { LOCATION_LOGO_IDS, normalizeMaterials } from '@/domain/types'
+import { migratePreset } from '@/domain/boxConfig'
 
 export type CatalogWarning = {
   file?: string
@@ -32,18 +33,28 @@ function asString(v: unknown): string | null {
   return typeof v === 'string' ? v : null
 }
 
-function validateSizeRow(row: unknown, index: number, file: string, warnings: CatalogWarning[]) {
+function validateSizeRow(
+  row: unknown,
+  index: number,
+  file: string,
+  warnings: CatalogWarning[],
+): SizeRow | null {
   if (!isObject(row)) {
     warnings.push({ file, field: `rows[${index}]`, message: 'Row must be an object' })
     return null
   }
-  return {
+  const out: SizeRow = {
     mondo: asString(row.mondo) ?? '',
     usM: asString(row.usM) ?? '',
     usW: asString(row.usW) ?? '',
     uk: asString(row.uk) ?? '',
     eu: asString(row.eu) ?? '',
-  } satisfies SizeRow
+  }
+  const usKids = asString(row.usKids)
+  if (usKids) out.usKids = usKids
+  const legalProfileId = asString(row.legalProfileId)
+  if (legalProfileId) out.legalProfileId = legalProfileId
+  return out
 }
 
 export function parseSizeChartJson(
@@ -139,7 +150,7 @@ export function parseModelJson(
   }
   const out = raw.outputs as Record<string, unknown>
   const cmyk = isObject(raw.brandColorCmyk) ? raw.brandColorCmyk : { c: 0, m: 0, y: 0, k: 1 }
-  return {
+  const preset: ModelPreset = {
     id,
     name,
     brandColorHex,
@@ -179,6 +190,45 @@ export function parseModelJson(
     },
     defaultProductImageId: asString(raw.defaultProductImageId) ?? undefined,
   }
+
+  if (raw.boxProductMode === 'single' || raw.boxProductMode === 'dual') {
+    preset.boxProductMode = raw.boxProductMode
+  }
+  if (isObject(raw.boxDimensionsMm)) {
+    preset.boxDimensionsMm = {
+      width: Number(raw.boxDimensionsMm.width) || 140,
+      height: Number(raw.boxDimensionsMm.height) || 120,
+    }
+  }
+  if (Array.isArray(raw.enabledSizeSystems)) {
+    preset.enabledSizeSystems = raw.enabledSizeSystems.filter(
+      (x): x is NonNullable<ModelPreset['enabledSizeSystems']>[number] =>
+        typeof x === 'string',
+    )
+  }
+  if (isObject(raw.boxTableFlow)) {
+    preset.boxTableFlow = raw.boxTableFlow as ModelPreset['boxTableFlow']
+  }
+  if (isObject(raw.legalDisplay)) {
+    preset.legalDisplay = raw.legalDisplay as ModelPreset['legalDisplay']
+  }
+  if (raw.pdfFontMode === 'outlined' || raw.pdfFontMode === 'editable') {
+    preset.pdfFontMode = raw.pdfFontMode
+  }
+  if (raw.boxTextColorMode === 'pure-k' || raw.boxTextColorMode === 'brand') {
+    preset.boxTextColorMode = raw.boxTextColorMode
+  }
+  if (Array.isArray(raw.boxProducts)) {
+    preset.boxProducts = raw.boxProducts as ModelPreset['boxProducts']
+  }
+  if (Array.isArray(raw.boxLogoRefs)) {
+    preset.boxLogoRefs = raw.boxLogoRefs as ModelPreset['boxLogoRefs']
+  }
+  if (Array.isArray(raw.customLogos)) {
+    preset.customLogos = raw.customLogos as ModelPreset['customLogos']
+  }
+
+  return migratePreset(preset)
 }
 
 function collectLogoRefs(preset: ModelPreset): string[] {

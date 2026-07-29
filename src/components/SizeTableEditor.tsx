@@ -3,6 +3,7 @@ import type { SizeChartTable, SizeRow } from '@/domain/types'
 import {
   cloneSizeTable,
   createEmptySizeTable,
+  detectMode,
   emptySizeRow,
   validateSizeTable,
 } from '@/domain/sizechart'
@@ -18,10 +19,14 @@ type Props = {
   value: SizeChartTable
   catalogTable?: SizeChartTable
   onChange: (next: SizeChartTable) => void
-  onModeChange?: (mode: SizeChartTable['mode']) => void
+  /** Kids checkbox — adds US Kids column. */
+  kids: boolean
+  onKidsChange: (kids: boolean) => void
 }
 
-const COLS: Array<{ key: keyof SizeRow; label: string }> = [
+type ClassSelect = 'default' | 'adult-class-a' | 'kids-class-b' | 'none'
+
+const BASE_COLS: Array<{ key: keyof SizeRow; label: string }> = [
   { key: 'mondo', label: 'MONDO' },
   { key: 'usM', label: 'US M' },
   { key: 'usW', label: 'US W' },
@@ -29,11 +34,29 @@ const COLS: Array<{ key: keyof SizeRow; label: string }> = [
   { key: 'eu', label: 'EU' },
 ]
 
+function classSelectValue(row: SizeRow): ClassSelect {
+  if (!row.legalProfileId) return 'default'
+  if (row.legalProfileId === 'adult-class-a') return 'adult-class-a'
+  if (row.legalProfileId === 'kids-class-b') return 'kids-class-b'
+  if (row.legalProfileId === 'none') return 'none'
+  return 'default'
+}
+
+function applyClassSelect(row: SizeRow, value: ClassSelect): SizeRow {
+  if (value === 'default') {
+    const next = { ...row }
+    delete next.legalProfileId
+    return next
+  }
+  return { ...row, legalProfileId: value }
+}
+
 export function SizeTableEditor({
   value,
   catalogTable,
   onChange,
-  onModeChange,
+  kids,
+  onKidsChange,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [importError, setImportError] = useState<string | null>(null)
@@ -41,9 +64,31 @@ export function SizeTableEditor({
   const errors = useMemo(() => validateSizeTable(value), [value])
   const baseName = value.id || value.name || 'size-chart'
 
+  const cols = useMemo(() => {
+    if (!kids) return BASE_COLS
+    // Insert US Kids after US W
+    return [
+      BASE_COLS[0],
+      BASE_COLS[1],
+      BASE_COLS[2],
+      { key: 'usKids' as const, label: 'US Kids' },
+      BASE_COLS[3],
+      BASE_COLS[4],
+    ]
+  }, [kids])
+
   function patchRow(index: number, key: keyof SizeRow, text: string) {
     const rows = value.rows.map((r, i) =>
       i === index ? { ...r, [key]: text } : r,
+    )
+    const next = { ...value, rows }
+    next.mode = detectMode(rows)
+    onChange(next)
+  }
+
+  function patchRowClass(index: number, next: ClassSelect) {
+    const rows = value.rows.map((r, i) =>
+      i === index ? applyClassSelect(r, next) : r,
     )
     onChange({ ...value, rows })
   }
@@ -79,7 +124,6 @@ export function SizeTableEditor({
   function resetFromCatalog() {
     if (!catalogTable) return
     onChange(cloneSizeTable(catalogTable))
-    onModeChange?.(catalogTable.mode)
   }
 
   function exportCsv() {
@@ -98,13 +142,13 @@ export function SizeTableEditor({
     if (!file) return
     try {
       const table = await importSizeTableFile(file)
-      // Keep working id/name when importing data into current chart
       onChange({
         ...table,
         id: value.id || table.id,
         name: value.name || table.name,
       })
-      onModeChange?.(table.mode)
+      const hasKids = table.rows.some((r) => (r.usKids ?? '').trim())
+      if (hasKids) onKidsChange(true)
       setImportError(null)
     } catch (e) {
       setImportError(e instanceof Error ? e.message : 'Import failed')
@@ -117,20 +161,14 @@ export function SizeTableEditor({
     <div className="field size-table-editor">
       <div className="field-label-row">
         <label>Size table (editable)</label>
-        <div className="rt-toolbar">
-          <select
-            value={value.mode}
-            onChange={(e) => {
-              const mode = e.target.value as SizeChartTable['mode']
-              onChange({ ...value, mode })
-              onModeChange?.(mode)
-            }}
-            title="Single or range size values"
-          >
-            <option value="single">Single values</option>
-            <option value="dual">Range values (e.g. 36-38)</option>
-          </select>
-        </div>
+        <label className="check-inline">
+          <input
+            type="checkbox"
+            checked={kids}
+            onChange={(e) => onKidsChange(e.target.checked)}
+          />
+          Kids (US Kids column)
+        </label>
       </div>
 
       <div className="size-table-wrap">
@@ -138,9 +176,10 @@ export function SizeTableEditor({
           <thead>
             <tr>
               <th>#</th>
-              {COLS.map((c) => (
+              {cols.map((c) => (
                 <th key={c.key}>{c.label}</th>
               ))}
+              <th>CLASS</th>
               <th />
             </tr>
           </thead>
@@ -148,15 +187,29 @@ export function SizeTableEditor({
             {value.rows.map((row, i) => (
               <tr key={i}>
                 <td className="idx">{i + 1}</td>
-                {COLS.map((c) => (
+                {cols.map((c) => (
                   <td key={c.key}>
                     <input
-                      value={row[c.key]}
+                      value={(row[c.key] as string | undefined) ?? ''}
                       onChange={(e) => patchRow(i, c.key, e.target.value)}
                       aria-label={`${c.label} row ${i + 1}`}
                     />
                   </td>
                 ))}
+                <td>
+                  <select
+                    value={classSelectValue(row)}
+                    onChange={(e) =>
+                      patchRowClass(i, e.target.value as ClassSelect)
+                    }
+                    aria-label={`Class row ${i + 1}`}
+                  >
+                    <option value="default">Default</option>
+                    <option value="adult-class-a">A</option>
+                    <option value="kids-class-b">B</option>
+                    <option value="none">None</option>
+                  </select>
+                </td>
                 <td className="row-tools">
                   <button type="button" title="Move up" onClick={() => moveRow(i, -1)}>
                     {'\u25B2'}
@@ -220,12 +273,8 @@ export function SizeTableEditor({
           onChange={(e) => onImport(e.target.files?.[0] ?? null)}
         />
       </div>
-      <p className="hint">
-        Import detects headers in row 1 or column 1 (MONDO, US M, US W, UK, EU).
-        Export uses headers in column 1, like the label layout.
-      </p>
       {errors.length > 0 && (
-        <p className="hint warn">{errors.join(' � ')}</p>
+        <p className="hint warn">{errors.join(' · ')}</p>
       )}
       {importError && <p className="hint error-text">{importError}</p>}
     </div>

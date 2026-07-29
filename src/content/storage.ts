@@ -1,5 +1,7 @@
 import type { LabelDocument, ModelPreset, SizeChartTable } from '@/domain/types'
 import { STORAGE_VERSION } from '@/domain/types'
+import { migrateDocument, migratePreset } from '@/domain/boxConfig'
+import { cloneSizeTable } from '@/domain/sizechart'
 
 const DOC_KEY = 'ps-labels:document'
 const PRESETS_KEY = 'ps-labels:user-presets'
@@ -16,10 +18,7 @@ type StoredBundle = {
 function migrateIfNeeded() {
   const ver = Number(localStorage.getItem(VERSION_KEY) || '0')
   if (ver >= STORAGE_VERSION) return
-  // Wipe incompatible older shapes rather than silently corrupting UI
-  if (ver < 2) {
-    // keep presets if parseable; drop doc/table if schema drifted
-  }
+  // Soft migrate: bump version; loaders normalize shapes via migrateDocument/migratePreset
   localStorage.setItem(VERSION_KEY, String(STORAGE_VERSION))
 }
 
@@ -33,7 +32,7 @@ export function loadDocumentLocal(): LabelDocument | null {
   const raw = localStorage.getItem(DOC_KEY)
   if (!raw) return null
   try {
-    return JSON.parse(raw) as LabelDocument
+    return migrateDocument(JSON.parse(raw) as Partial<LabelDocument>)
   } catch {
     return null
   }
@@ -49,7 +48,19 @@ export function loadWorkingTable(): SizeChartTable | null {
   const raw = localStorage.getItem(TABLE_KEY)
   if (!raw) return null
   try {
-    return JSON.parse(raw) as SizeChartTable
+    const table = JSON.parse(raw) as SizeChartTable
+    return cloneSizeTable({
+      ...table,
+      rows: (table.rows ?? []).map((r) => ({
+        mondo: r.mondo ?? '',
+        usM: r.usM ?? '',
+        usW: r.usW ?? '',
+        usKids: r.usKids ?? '',
+        uk: r.uk ?? '',
+        eu: r.eu ?? '',
+        legalProfileId: r.legalProfileId,
+      })),
+    })
   } catch {
     return null
   }
@@ -57,7 +68,7 @@ export function loadWorkingTable(): SizeChartTable | null {
 
 export function saveUserPresets(presets: ModelPreset[]) {
   migrateIfNeeded()
-  localStorage.setItem(PRESETS_KEY, JSON.stringify(presets))
+  localStorage.setItem(PRESETS_KEY, JSON.stringify(presets.map(migratePreset)))
 }
 
 export function loadUserPresets(): ModelPreset[] {
@@ -65,7 +76,8 @@ export function loadUserPresets(): ModelPreset[] {
   const raw = localStorage.getItem(PRESETS_KEY)
   if (!raw) return []
   try {
-    return JSON.parse(raw) as ModelPreset[]
+    const list = JSON.parse(raw) as ModelPreset[]
+    return list.map(migratePreset)
   } catch {
     return []
   }

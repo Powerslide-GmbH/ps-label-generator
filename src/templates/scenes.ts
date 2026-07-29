@@ -1,12 +1,17 @@
 import type { LabelDocument, SizeChartTable, SizeRow, TextRun } from '@/domain/types'
 import {
-  BOX_SHEET_MM,
   SIZE_DOUBLE_SHEET_MM,
   SIZE_NORMAL_SHEET_MM,
 } from '@/domain/types'
-import { headersForRow, valuesForRow } from '@/domain/sizechart'
+import { SIZE_SYSTEM_TO_KEY } from '@/domain/boxConfig'
+import {
+  headersForRow,
+  systemsForBoxTable,
+  valuesForRow,
+} from '@/domain/sizechart'
 import { plainText } from '@/domain/richText'
 import { packLabels } from '@/domain/packing'
+import { buildResponsiveBoxLabelScene } from './boxScene'
 
 export const SIZE_LABEL_NORMAL = { w: 45, h: 30 }
 export const SIZE_LABEL_DOUBLE = { w: 76, h: 23 }
@@ -68,6 +73,9 @@ export type LabelScene = {
   width: number
   height: number
   nodes: SceneNode[]
+  overflow?: { block: string; message: string }[]
+  layoutStrategy?: string
+  tableWarning?: string
 }
 
 export type SceneAssets = {
@@ -713,354 +721,9 @@ export function buildBoxLabelScene(
   table: SizeChartTable,
   logos: Array<string | { href: string; aspectRatio?: number }>,
   productHref: string | null,
-  assets: SceneAssets = {},
+  assets: SceneAssets & { productHrefs?: (string | null)[] } = {},
 ): LabelScene {
-  // Production sheet includes the 140×120 mm dimension callouts.
-  const pageW = BOX_SHEET_MM.w
-  const pageH = BOX_SHEET_MM.h
-  const labelX = (pageW - BOX_LABEL.w) / 2
-  const labelY = 21
-  const marginX = 12
-  const marginTop = 9.8
-  const marginBottom = 6
-  const blue = doc.brandColorHex
-  const gridLine = '#d3d3d3'
-  const capsuleStroke = '#c4c4c4'
-  const nodes: SceneNode[] = [
-    { type: 'rect', x: 0, y: 0, w: pageW, h: pageH, fill: '#fff' },
-    {
-      type: 'rect',
-      x: labelX,
-      y: labelY,
-      w: BOX_LABEL.w,
-      h: BOX_LABEL.h,
-      fill: '#fff',
-      stroke: '#222',
-      strokeWidth: 0.3,
-      radius: 4,
-    },
-  ]
-
-  // Model caption and dimension brackets around the actual box label.
-  nodes.push({
-    type: 'text',
-    x: 8,
-    y: 7,
-    runs: titleRuns(doc, 4.3),
-    fill: '#111',
-  })
-  const topDimY = 14
-  nodes.push(
-    {
-      type: 'line',
-      x1: labelX,
-      y1: topDimY,
-      x2: labelX + BOX_LABEL.w,
-      y2: topDimY,
-      stroke: '#222',
-      strokeWidth: 0.3,
-    },
-    {
-      type: 'line',
-      x1: labelX,
-      y1: topDimY,
-      x2: labelX,
-      y2: labelY - 1,
-      stroke: '#222',
-      strokeWidth: 0.3,
-    },
-    {
-      type: 'line',
-      x1: labelX + BOX_LABEL.w,
-      y1: topDimY,
-      x2: labelX + BOX_LABEL.w,
-      y2: labelY - 1,
-      stroke: '#222',
-      strokeWidth: 0.3,
-    },
-    {
-      type: 'text',
-      x: labelX + BOX_LABEL.w / 2,
-      y: topDimY - 2,
-      runs: [{ text: '140mm', bold: false, fontSize: 3.3 }],
-      fill: '#222',
-      anchor: 'middle',
-    },
-  )
-  const leftDimX = labelX - 9
-  nodes.push(
-    {
-      type: 'line',
-      x1: leftDimX,
-      y1: labelY,
-      x2: leftDimX,
-      y2: labelY + BOX_LABEL.h,
-      stroke: '#222',
-      strokeWidth: 0.3,
-    },
-    {
-      type: 'line',
-      x1: leftDimX,
-      y1: labelY,
-      x2: labelX - 2,
-      y2: labelY,
-      stroke: '#222',
-      strokeWidth: 0.3,
-    },
-    {
-      type: 'line',
-      x1: leftDimX,
-      y1: labelY + BOX_LABEL.h,
-      x2: labelX - 2,
-      y2: labelY + BOX_LABEL.h,
-      stroke: '#222',
-      strokeWidth: 0.3,
-    },
-    {
-      type: 'text',
-      x: leftDimX - 2,
-      y: labelY + BOX_LABEL.h / 2 + 1,
-      runs: [{ text: '120mm', bold: false, fontSize: 3.3 }],
-      fill: '#222',
-      anchor: 'end',
-    },
-  )
-
-  const contentLeft = labelX + marginX
-  const contentRight = labelX + BOX_LABEL.w - marginX
-  const labelColW = 15
-  const gridX = contentLeft + labelColW
-  const gridW = contentRight - gridX
-  const cols = Math.max(table.rows.length, 1)
-  const colW = gridW / cols
-  const rowH = 6.3
-  const sizeRowY = labelY + marginTop + 2
-
-  nodes.push({
-    type: 'text',
-    x: gridX - 1.5,
-    y: sizeRowY + 2.5,
-    runs: [{ text: 'SIZE', bold: true, fontSize: 3.5 }],
-    fill: '#111',
-    anchor: 'end',
-  })
-
-  for (let i = 0; i < cols; i++) {
-    const cw = Math.max(colW - 2.6, 3.5)
-    nodes.push({
-      type: 'rect',
-      x: gridX + i * colW + (colW - cw) / 2,
-      y: sizeRowY - 1.1,
-      w: cw,
-      h: 4.0,
-      stroke: capsuleStroke,
-      strokeWidth: 0.25,
-      radius: 2,
-      fill: 'none',
-    })
-  }
-
-  const systems = [
-    { key: 'mondo' as const, label: 'MONDO' },
-    { key: 'usM' as const, label: 'US M' },
-    { key: 'usW' as const, label: 'US W' },
-    { key: 'uk' as const, label: 'UK' },
-    { key: 'eu' as const, label: 'EU' },
-  ]
-  const tableTop = labelY + marginTop + 7.5
-  systems.forEach((sys, rowIdx) => {
-    const rowTop = tableTop + rowIdx * rowH
-    const rowMid = rowTop + rowH / 2
-    if (rowIdx % 2 === 1) {
-      nodes.push({
-        type: 'rect',
-        x: contentLeft,
-        y: rowTop,
-        w: contentRight - contentLeft,
-        h: rowH,
-        fill: '#e9e9e9',
-      })
-    }
-    nodes.push({
-      type: 'text',
-      x: gridX - 1.5,
-      y: rowMid + 1.3,
-      runs: [{ text: sys.label, bold: true, fontSize: 3.35 }],
-      fill: '#111',
-      anchor: 'end',
-    })
-    // Divider after label column
-    nodes.push({
-      type: 'line',
-      x1: gridX,
-      y1: rowTop,
-      x2: gridX,
-      y2: rowTop + rowH,
-      stroke: rowIdx % 2 === 1 ? '#fff' : gridLine,
-      strokeWidth: rowIdx % 2 === 1 ? 0.3 : 0.16,
-    })
-    table.rows.forEach((row, i) => {
-      if (i > 0) {
-        nodes.push({
-          type: 'line',
-          x1: gridX + i * colW,
-          y1: rowTop,
-          x2: gridX + i * colW,
-          y2: rowTop + rowH,
-          stroke: rowIdx % 2 === 1 ? '#fff' : gridLine,
-          strokeWidth: rowIdx % 2 === 1 ? 0.3 : 0.16,
-        })
-      }
-      const fontSize = 3.1
-      nodes.push({
-        type: 'text',
-        x: gridX + i * colW + colW / 2,
-        y: rowMid + fontSize * 0.35,
-        runs: [{ text: row[sys.key] || '', bold: false, fontSize }],
-        fill: '#111',
-        anchor: 'middle',
-      })
-    })
-  })
-
-  const brandTop = labelY + 61.5
-  const wordmark = assets.boxWordmarkHref || assets.wordmarkHref
-  const wmH = 8.2
-  if (wordmark) {
-    nodes.push({
-      type: 'image',
-      x: labelX + 12,
-      y: brandTop,
-      w: 66,
-      h: wmH,
-      href: wordmark,
-      fit: 'contain',
-    })
-  }
-
-  const titleSize = doc.titleSizes.box
-  const titleY = brandTop + wmH + 8.5
-  const skuSize = 4.6
-  nodes.push({
-    type: 'text',
-    x: labelX + 12,
-    y: titleY,
-    runs: titleRuns(doc, titleSize),
-    fill: blue,
-  })
-  nodes.push({
-    type: 'text',
-    x: labelX + 12,
-    y: titleY + titleSize + 0.2,
-    runs: [{ text: doc.sku, bold: false, fontSize: skuSize }],
-    fill: blue,
-  })
-
-  // Height is the lock (7 mm). Width follows each logo's natural aspect ratio.
-  const boxLogoH = 7
-  const boxLogoGap = 0.5
-  const boxLogoY = titleY + titleSize + skuSize + 1.2
-  let boxLogoX = labelX + 12
-  logos.slice(0, 4).forEach((entry) => {
-    const href = typeof entry === 'string' ? entry : entry.href
-    if (!href) return
-    const aspect =
-      typeof entry === 'string' ? 1 : Math.max(entry.aspectRatio ?? 1, 0.4)
-    const boxLogoW = boxLogoH * aspect
-    nodes.push({
-      type: 'image',
-      x: boxLogoX,
-      y: boxLogoY,
-      w: boxLogoW,
-      h: boxLogoH,
-      href,
-      fit: 'contain',
-    })
-    boxLogoX += boxLogoW + boxLogoGap
-  })
-
-  if (productHref) {
-    nodes.push({
-      type: 'image',
-      x: labelX + 82,
-      y: brandTop - 6,
-      w: 52,
-      h: 48,
-      href: productHref,
-      fit: 'contain',
-    })
-  }
-
-  const l = doc.legal
-  const footerBottom = labelY + BOX_LABEL.h - marginBottom
-  const legalLineH = 4.3
-  const legalLines = [
-    { text: l.company, bold: true, fontSize: 3.0 },
-    { text: l.address.replace(/,$/, ''), bold: false, fontSize: 2.8 },
-    { text: `${l.phone} | ${l.fax}`, bold: false, fontSize: 2.8 },
-    { text: `${l.web} | ${l.email}`, bold: false, fontSize: 2.8 },
-  ]
-  legalLines.forEach((line, i) => {
-    nodes.push({
-      type: 'text',
-      x: labelX + 12,
-      y: footerBottom - (legalLines.length - 1 - i) * legalLineH,
-      runs: [{ text: line.text, bold: line.bold, fontSize: line.fontSize }],
-      fill: blue,
-    })
-  })
-
-  const regRight = labelX + BOX_LABEL.w - 10
-  const iconW = 8
-  const iconH = 6.5
-  const iconX = labelX + 90
-  const madeInY = footerBottom
-  const classLineH = 2.85
-  // Bottom-justify class block with MADE IN (same baseline on last line).
-  const classBottom = madeInY
-  const classLines = [
-    { text: l.standard, bold: false, fontSize: 2.45 },
-    { text: `${l.classText}:`, bold: true, fontSize: 2.45 },
-    { text: l.weightRange, bold: false, fontSize: 2.35 },
-  ]
-  classLines.forEach((line, i) => {
-    nodes.push({
-      type: 'text',
-      x: regRight,
-      y: classBottom - (classLines.length - 1 - i) * classLineH,
-      runs: [{ text: line.text, bold: line.bold, fontSize: line.fontSize }],
-      fill: '#222',
-      anchor: 'end',
-    })
-  })
-  const iconY = madeInY - iconH - 2.2
-  if (assets.classLogoHref) {
-    nodes.push({
-      type: 'image',
-      x: iconX,
-      y: iconY,
-      w: iconW,
-      h: iconH,
-      href: assets.classLogoHref,
-      fit: 'contain',
-    })
-  }
-  nodes.push({
-    type: 'text',
-    x: iconX + iconW / 2,
-    y: madeInY,
-    runs: [{ text: l.madeIn.toUpperCase(), bold: false, fontSize: 2.6 }],
-    fill: '#444',
-    anchor: 'middle',
-  })
-
-  return {
-    kind: 'box',
-    unit: 'mm',
-    width: pageW,
-    height: pageH,
-    nodes,
-  }
+  return buildResponsiveBoxLabelScene(doc, table, logos, productHref, assets)
 }
 
 export function buildSizeChartScene(
@@ -1103,13 +766,7 @@ export function buildSizeChartScene(
     fill: '#111',
   })
 
-  const systems = [
-    { key: 'mondo' as const, label: 'MONDO' },
-    { key: 'usM' as const, label: 'US M' },
-    { key: 'usW' as const, label: 'US W' },
-    { key: 'uk' as const, label: 'UK' },
-    { key: 'eu' as const, label: 'EU' },
-  ]
+  const systems = systemsForBoxTable(table, doc.enabledSizeSystems)
   const tableX = 40
   const tableY = 140
   const tableW = w - 80
@@ -1118,6 +775,7 @@ export function buildSizeChartScene(
   const colW = (tableW - labelW) / Math.max(table.rows.length, 1)
 
   systems.forEach((sys, rowIdx) => {
+    const key = SIZE_SYSTEM_TO_KEY[sys]
     const yy = tableY + rowIdx * rowH
     if (rowIdx % 2 === 1) {
       nodes.push({
@@ -1142,7 +800,7 @@ export function buildSizeChartScene(
       type: 'text',
       x: tableX + 10,
       y: yy + rowH / 2 + 8,
-      runs: [{ text: sys.label, bold: true, fontSize: 26 }],
+      runs: [{ text: sys, bold: true, fontSize: 26 }],
       fill: '#111',
     })
     table.rows.forEach((row, i) => {
@@ -1160,7 +818,7 @@ export function buildSizeChartScene(
         type: 'text',
         x: cx,
         y: yy + rowH / 2 + 8,
-        runs: [{ text: row[sys.key] || '', bold: false, fontSize: 24 }],
+        runs: [{ text: row[key] || '', bold: false, fontSize: 24 }],
         fill: '#111',
         anchor: 'middle',
       })

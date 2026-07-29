@@ -1,0 +1,124 @@
+{
+  "id": "box-rocket-kids-120",
+  "name": "Rocket Kids Dual 120x100",
+  "brandColorHex": "#416BE0",
+  "brandColorCmyk": {
+    "c": 0.76,
+    "m": 0.51,
+    "y": 0,
+    "k": 0
+  },
+  "brandWordmarkLogoId": "powerslide_logo_blue",
+  "badgeLogoId": "PS_small_CMYK",
+  "sizeChartId": "box-rocket-kids-120",
+  "mode": "dual",
+  "defaultTitle": [
+    {
+      "text": "ROCKET",
+      "bold": true
+    }
+  ],
+  "defaultSku": "940711",
+  "boxLogos": [
+    "PS_small_CMYK",
+    "seg_FIT"
+  ],
+  "sizeChartLogos": [
+    "PS_small_CMYK",
+    "seg_FIT"
+  ],
+  "materials": {
+    "upper": "label_syntetic_material",
+    "lining": "label_textile_material",
+    "sole": "label_syntetic_material"
+  },
+  "legalProfileId": "kids-class-b",
+  "outputs": {
+    "sizeLabelNormal": false,
+    "sizeLabelDouble": true,
+    "boxLabel": true,
+    "sizeChart": false
+  },
+  "defaultProductImageId": "908464-42265_PS_Next_Edge_150_2025_view01.tif",
+  "boxProductMode": "dual",
+  "boxProducts": [
+    {
+      "title": [
+        {
+          "text": "ROCKET MOTLEY ADJ.",
+          "bold": true
+        }
+      ],
+      "sku": "#940711",
+      "imageName": "908464-42265_PS_Next_Edge_150_2025_view01.tif",
+      "imagePath": "content/products/908464-42265_PS_Next_Edge_150_2025_view01.tif"
+    },
+    {
+      "title": [
+        {
+          "text": "ROCKET PALE MAUVE ADJ.",
+          "bold": true
+        }
+      ],
+      "sku": "#940712",
+      "imageName": "908474_PS_Storm_80_Mango_2026_view01.tif",
+      "imagePath": "content/products/908474_PS_Storm_80_Mango_2026_view01.tif"
+    }
+  ],
+  "boxDimensionsMm": {
+    "width": 120,
+    "height": 100
+  },
+  "enabledSizeSystems": [
+    "MONDO",
+    "US Kids",
+    "UK",
+    "EU"
+  ],
+  "boxTableFlow": {
+    "mode": "auto"
+  },
+  "legalDisplay": {
+    "showCompany": true,
+    "showPostalAddress": true,
+    "showPhoneFax": true,
+    "showWebEmail": true,
+    "showStandard": true,
+    "showClass": true,
+    "showWeight": true,
+    "showMadeIn": true
+  },
+  "pdfFontMode": "outlined",
+  "boxTextColorMode": "brand",
+  "sizeTable": {
+    "id": "box-rocket-kids-120",
+    "name": "Rocket-Kids",
+    "mode": "dual",
+    "rows": [
+      {
+        "mondo": "185-203",
+        "usM": "",
+        "usW": "",
+        "usKids": "Jr.11 - 1",
+        "uk": "Jr.10 - Jr.13",
+        "eu": "29-32"
+      },
+      {
+        "mondo": "209-227",
+        "usM": "",
+        "usW": "",
+        "usKids": "2 - 5",
+        "uk": "1 - 4",
+        "eu": "33-36"
+      },
+      {
+        "mondo": "233-252",
+        "usM": "",
+        "usW": "",
+        "usKids": "5.5 - 7.5",
+        "uk": "4.5 - 6.5",
+        "eu": "37-40"
+      }
+    ]
+  }
+}
