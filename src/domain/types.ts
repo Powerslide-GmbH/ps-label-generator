@@ -107,6 +107,8 @@ export type BoxLayoutSettings = {
   wordmarkScale: number
   /** Scale applied to product images in both single and dual layouts. */
   productImageScale: number
+  /** Font size used by dual-product subtitles, in mm. */
+  subtitleSizeMm: number
   /** Width of the single-product text column as a percentage of content width. */
   titleColumnPercent: number
   /** Extra vertical space between the table and brand/product region, in mm. */
@@ -380,7 +382,7 @@ export const DEFAULT_MATERIALS: MaterialSelection = {
 export const DEFAULT_TITLE_SIZES: TitleSizes = {
   sizeLabel: 2.2,
   sizeLabelDouble: 2.3,
-  box: 4.8,
+  box: 4,
   sizeChart: 38,
 }
 
@@ -419,6 +421,7 @@ export const DEFAULT_BOX_LAYOUT: BoxLayoutSettings = {
   wordmarkAlign: 'auto',
   wordmarkScale: 1,
   productImageScale: 1,
+  subtitleSizeMm: 2.35,
   titleColumnPercent: 50,
   brandGapMm: 0,
 }

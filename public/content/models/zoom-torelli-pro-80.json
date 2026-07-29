@@ -25,11 +25,11 @@
   "defaultSku": "908472",
   "boxLogos": [
     "PS_small_CMYK",
-    "seg_FIT"
+    "PS_urban_badge"
   ],
   "sizeChartLogos": [
     "PS_small_CMYK",
-    "seg_FIT"
+    "PS_urban_badge"
   ],
   "materials": {
     "upper": "label_syntetic_material",

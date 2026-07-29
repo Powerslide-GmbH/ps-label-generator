@@ -30,7 +30,8 @@
   ],
   "sizeChartLogos": [
     "PS_small_CMYK",
-    "seg_SUV_CMYK"
+    "seg_SUV_CMYK",
+    "Trinity_small_CMYK"
   ],
   "materials": {
     "upper": "label_syntetic_material",

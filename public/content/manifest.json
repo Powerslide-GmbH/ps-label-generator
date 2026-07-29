@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-29T11:51:53.478Z",
+  "generatedAt": "2026-07-29T15:10:54.962Z",
   "logos": [
     {
       "id": "PS_big_CMYK",
@@ -7,6 +7,20 @@
       "label": "PS big CMYK",
       "path": "content/logos/PS_big_CMYK.svg",
       "aspectRatio": 8.9783
+    },
+    {
+      "id": "PS_kid_badge",
+      "name": "PS_kid_badge.svg",
+      "label": "PS kid badge",
+      "path": "content/logos/PS_kid_badge.svg",
+      "aspectRatio": 1
+    },
+    {
+      "id": "PS_racing_badge",
+      "name": "PS_racing_badge.svg",
+      "label": "PS racing badge",
+      "path": "content/logos/PS_racing_badge.svg",
+      "aspectRatio": 2.3733
     },
     {
       "id": "PS_small",
@@ -21,6 +35,13 @@
       "label": "PS small CMYK",
       "path": "content/logos/PS_small_CMYK.svg",
       "aspectRatio": 1
+    },
+    {
+      "id": "PS_urban_badge",
+      "name": "PS_urban_badge.svg",
+      "label": "PS urban badge",
+      "path": "content/logos/PS_urban_badge.svg",
+      "aspectRatio": 2.3734
     },
     {
       "id": "Trinity_small_CMYK",

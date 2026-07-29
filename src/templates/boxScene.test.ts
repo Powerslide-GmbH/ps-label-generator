@@ -317,6 +317,34 @@ describe('layoutStrategy', () => {
     expect((wordmark?.w ?? 0) / (wordmark?.h ?? 1)).toBeCloseTo(3.6034, 3)
   })
 
+  it('applies wordmark alignment in the dual side-header layout', () => {
+    const table = tableFor('side-header-align', 'dual', dualRows(4, true))
+    const doc = documentFromPreset(
+      basePreset({
+        id: 'side-header-align',
+        name: 'SIDE HEADER',
+        mode: 'dual',
+        boxProductMode: 'dual',
+        boxDimensionsMm: { width: 125, height: 110 },
+        boxLayout: { wordmarkAlign: 'right' },
+        sizeTable: table,
+      }),
+      migrateDocument({}).legal,
+    )
+    const scene = buildResponsiveBoxLabelScene(doc, table, [], null, {
+      boxWordmarkHref: 'narrow.svg',
+      boxWordmarkAspectRatio: 2.5,
+    })
+    const wordmark = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'image' }> =>
+        node.type === 'image' && node.href === 'narrow.svg',
+    )
+
+    expect(scene.layoutStrategy).toBe('dual-side-by-side-junior')
+    expect(wordmark?.alignX).toBe('right')
+    expect(wordmark?.x).toBeGreaterThan(25)
+  })
+
   it('uses single-standard for a short single-size run', () => {
     const rows = singleRows(6)
     const table = tableFor('short', 'single', rows)
@@ -469,7 +497,7 @@ describe('layoutStrategy', () => {
     expect((image?.x ?? 0) - (title?.x ?? 0)).toBeGreaterThan(40)
   })
 
-  it('caps product title and SKU sizes when a large preset switches to dual', () => {
+  it('honors the editable box title size in a dual layout', () => {
     const table = tableFor('dual-from-large', 'dual', dualRows(6))
     const doc = documentFromPreset(
       basePreset({
@@ -477,7 +505,7 @@ describe('layoutStrategy', () => {
         name: 'SHARED MODEL',
         mode: 'dual',
         boxProductMode: 'dual',
-        titleSizes: { box: 8 },
+        titleSizes: { box: 5.4 },
         boxProducts: [
           {
             title: [{ text: 'COLOR ONE', bold: true }],
@@ -506,9 +534,51 @@ describe('layoutStrategy', () => {
         ),
     )
     expect(productText.length).toBeGreaterThanOrEqual(2)
-    expect(
-      Math.max(...productText.flatMap((node) => node.runs.map((run) => run.fontSize ?? 0))),
-    ).toBeLessThanOrEqual(3.2)
+    const colorTitle = productText.find((node) =>
+      node.runs.some((run) => run.text === 'COLOR ONE'),
+    )
+    expect(colorTitle?.runs[0]?.fontSize).toBe(5.4)
+  })
+
+  it('keeps dual product image slots separated at maximum scale', () => {
+    const table = tableFor('dual-image-columns', 'dual', dualRows(4))
+    const doc = documentFromPreset(
+      basePreset({
+        id: 'dual-image-columns',
+        name: 'DUAL IMAGE COLUMNS',
+        mode: 'dual',
+        boxProductMode: 'dual',
+        boxDimensionsMm: { width: 125, height: 110 },
+        boxLayout: { productImageScale: 1.5 },
+        boxProducts: [
+          {
+            title: [{ text: 'PRODUCT ONE', bold: true }],
+            sku: 'ONE',
+            imagePath: 'one.png',
+            imageName: 'one.png',
+          },
+          {
+            title: [{ text: 'PRODUCT TWO', bold: true }],
+            sku: 'TWO',
+            imagePath: 'two.png',
+            imageName: 'two.png',
+          },
+        ],
+        sizeTable: table,
+      }),
+      migrateDocument({}).legal,
+    )
+    const scene = buildResponsiveBoxLabelScene(doc, table, [], null)
+    const images = scene.nodes
+      .filter(
+        (node): node is Extract<SceneNode, { type: 'image' }> =>
+          node.type === 'image' &&
+          (node.href === 'one.png' || node.href === 'two.png'),
+      )
+      .sort((left, right) => left.x - right.x)
+
+    expect(images).toHaveLength(2)
+    expect(images[0].x + images[0].w).toBeLessThanOrEqual(images[1].x)
   })
 })
 
@@ -692,6 +762,44 @@ describe('dynamic footer rules', () => {
 })
 
 describe('dual model title', () => {
+  it('uses the configured subtitle size for dual-product box labels', () => {
+    const table = tableFor('subtitle-size', 'dual', dualRows(2, true))
+    const doc = documentFromPreset(
+      basePreset({
+        id: 'subtitle-size',
+        name: 'Subtitle size',
+        mode: 'dual',
+        boxProductMode: 'dual',
+        boxLayout: { subtitleSizeMm: 4 },
+        boxProducts: [
+          {
+            title: [{ text: 'PRODUCT ONE', bold: true }],
+            subtitle: 'ADJUSTABLE',
+            sku: '100001',
+            imagePath: null,
+            imageName: null,
+          },
+          {
+            title: [{ text: 'PRODUCT TWO', bold: true }],
+            subtitle: 'BOOT ONLY',
+            sku: '100002',
+            imagePath: null,
+            imageName: null,
+          },
+        ],
+        sizeTable: table,
+      }),
+      migrateDocument({}).legal,
+    )
+    const scene = buildResponsiveBoxLabelScene(doc, table, [], null)
+    const subtitle = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'text' }> =>
+        node.type === 'text' &&
+        node.runs.some((run) => run.text === 'ADJUSTABLE'),
+    )
+    expect(subtitle?.runs[0]?.fontSize).toBe(4)
+  })
+
   it('keeps defaultTitle as doc.title for dual presets (Triple X header)', () => {
     const table = tableFor('triple', 'dual', dualRows(2, true))
     const doc = documentFromPreset(

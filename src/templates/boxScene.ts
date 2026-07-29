@@ -886,6 +886,10 @@ export function buildResponsiveBoxLabelScene(
     const leftW = Math.min(contentW * 0.42, 50)
     const gap = 2.8
     const tableW = contentW - leftW - gap
+    const sideWordmarkAlign =
+      doc.boxLayout.wordmarkAlign === 'auto'
+        ? 'left'
+        : doc.boxLayout.wordmarkAlign
     const h = drawBoxSizeTable(nodes, {
       x: contentLeft + leftW + gap,
       y: tableStartY,
@@ -904,21 +908,27 @@ export function buildResponsiveBoxLabelScene(
       const wmW = assets.boxWordmarkAspectRatio
         ? Math.min(wmMaxW, assets.boxWordmarkAspectRatio * wmH)
         : wmMaxW
+      const wmX =
+        sideWordmarkAlign === 'right'
+          ? contentLeft + leftW - wmW
+          : sideWordmarkAlign === 'center'
+            ? contentLeft + (leftW - wmW) / 2
+            : contentLeft
       nodes.push({
         type: 'image',
-        x: contentLeft,
+        x: wmX,
         y: hy,
         w: wmW,
         h: wmH,
         href: wordmark,
         fit: 'contain',
-        alignX: 'left',
+        alignX: sideWordmarkAlign,
       })
       hy += wmH + 2.4
     }
     // Range / model title for header (doc.title), not the per-product color name.
     const headerTitle = doc.title.length ? doc.title : doc.boxProducts[0]?.title ?? []
-    const headerFs = Math.min(doc.titleSizes.box, 4.2)
+    const headerFs = Math.min(6, Math.max(2, doc.titleSizes.box))
     wrapTextRuns(
       headerTitle.map((r) => ({
         text: r.text,
@@ -1174,8 +1184,7 @@ function layoutSingleProduct(
       : href
         ? contentW * (doc.boxLayout.titleColumnPercent / 100)
         : contentW
-  const singleTitleSize =
-    strategy === 'single-split-table' ? Math.min(titleSize, 4.2) : titleSize
+  const singleTitleSize = Math.min(6, Math.max(2, titleSize))
   const wordmarkScale = doc.logoScales.brandWordmark
   const wmH =
     Math.min(
@@ -1445,7 +1454,7 @@ function layoutDualProducts(
     strategy !== 'dual-side-by-side-junior' &&
     plainText(doc.title).trim()
   ) {
-    const sharedTitleSize = Math.min(titleSize, 3.35)
+    const sharedTitleSize = Math.min(6, Math.max(2, titleSize))
     const sharedTitleWidth =
       wordmarkAlign === 'right' ? contentW * 0.56 : contentW * 0.72
     const sharedTitleX =
@@ -1487,7 +1496,10 @@ function layoutDualProducts(
   }
 
   const productBottomLimit = brandTop + brandAreaH
-  const dualTitleSize = Math.min(titleSize, compact ? 3.15 : 3.2)
+  const dualTitleSize = Math.min(
+    compact ? 5.2 : 5.6,
+    Math.max(2, titleSize),
+  )
   const sparseFooter =
     companyLines(doc.legal, doc.legalDisplay, compact).length === 0 &&
     classLines(doc.legal, doc.legalDisplay, compact).length === 0
@@ -1521,7 +1533,7 @@ function layoutDualProducts(
 
     const subtitle = slot.subtitle?.trim()
     if (subtitle) {
-      const subFs = Math.max(2.35, dualTitleSize * 0.52)
+      const subFs = doc.boxLayout.subtitleSizeMm
       nodes.push({
         type: 'text',
         x: colX,
@@ -1567,18 +1579,13 @@ function layoutDualProducts(
     const href = productHrefFor(i, productHref, assets, slot.imagePath)
     if (href) {
       const availH = Math.max(16, productBottomLimit - y)
-      const baseH = Math.min(Math.max(imageH, availH * 0.94), availH)
+      const baseH = Math.min(imageH, availH)
       const h = Math.min(
         availH,
         baseH * doc.boxLayout.productImageScale,
       )
       const imgW = Math.min(
-        colW *
-          (sparseFooter
-            ? 0.96
-            : strategy === 'dual-side-by-side-junior'
-              ? 1.12
-              : 1.06),
+        colW,
         h *
           (sparseFooter
             ? 2.08

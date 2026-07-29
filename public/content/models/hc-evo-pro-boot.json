@@ -25,11 +25,13 @@
   "defaultSku": "908468",
   "boxLogos": [
     "PS_small_CMYK",
-    "seg_FIT"
+    "PS_urban_badge",
+    "Trinity_small_CMYK"
   ],
   "sizeChartLogos": [
     "PS_small_CMYK",
-    "seg_FIT"
+    "PS_urban_badge",
+    "Trinity_small_CMYK"
   ],
   "materials": {
     "upper": "label_syntetic_material",

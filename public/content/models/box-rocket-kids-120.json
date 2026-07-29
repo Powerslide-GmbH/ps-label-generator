@@ -21,11 +21,11 @@
   "defaultSku": "940711",
   "boxLogos": [
     "PS_small_CMYK",
-    "seg_FIT"
+    "PS_kid_badge"
   ],
   "sizeChartLogos": [
     "PS_small_CMYK",
-    "seg_FIT"
+    "PS_kid_badge"
   ],
   "materials": {
     "upper": "label_syntetic_material",
@@ -38,6 +38,9 @@
     "sizeLabelDouble": true,
     "boxLabel": true,
     "sizeChart": false
+  },
+  "titleSizes": {
+    "box": 3.15
   },
   "defaultProductImageId": "940711_rocket_motley.jpg",
   "boxProductMode": "dual",

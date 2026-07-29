@@ -162,6 +162,7 @@ describe('preset json', () => {
           logoPlacement: 'brand',
           wordmarkScale: 0.85,
           productImageScale: 1.1,
+          subtitleSizeMm: 3.4,
           titleColumnPercent: 58,
           brandGapMm: 1,
         },
@@ -180,6 +181,7 @@ describe('preset json', () => {
     expect(doc.boxLayout.template).toBe('single-standard')
     expect(doc.boxLayout.logoPlacement).toBe('brand')
     expect(doc.boxLayout.wordmarkScale).toBe(0.85)
+    expect(doc.boxLayout.subtitleSizeMm).toBe(3.4)
     expect(plainText(doc.title)).toBe('ZOOM TORELLI PRO 80')
   })
 

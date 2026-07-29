@@ -25,11 +25,13 @@
   "defaultSku": "904719",
   "boxLogos": [
     "PS_small_CMYK",
-    "seg_FIT"
+    "PS_racing_badge",
+    "PS_kid_badge"
   ],
   "sizeChartLogos": [
     "PS_small_CMYK",
-    "seg_FIT"
+    "PS_racing_badge",
+    "PS_kid_badge"
   ],
   "materials": {
     "upper": "label_syntetic_material",
@@ -42,6 +44,9 @@
     "sizeLabelDouble": true,
     "boxLabel": true,
     "sizeChart": false
+  },
+  "titleSizes": {
+    "box": 4
   },
   "defaultProductImageId": "904719_triple_x_dark_grey.tif",
   "boxProductMode": "dual",

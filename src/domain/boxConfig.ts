@@ -209,6 +209,7 @@ export function normalizeBoxLayout(
     wordmarkAlign,
     wordmarkScale: finiteInRange(raw?.wordmarkScale, 1, 0.5, 1.8),
     productImageScale: finiteInRange(raw?.productImageScale, 1, 0.5, 1.5),
+    subtitleSizeMm: finiteInRange(raw?.subtitleSizeMm, 2.35, 1.5, 5),
     titleColumnPercent: finiteInRange(raw?.titleColumnPercent, 50, 30, 75),
     brandGapMm: finiteInRange(raw?.brandGapMm, 0, -4, 12),
     marginX: optionalMargin(raw?.marginX),

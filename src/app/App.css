@@ -933,18 +933,51 @@ textarea {
   color: var(--ink);
 }
 
-.advanced-output-settings {
-  margin-top: 12px;
-  padding-top: 11px;
-  border-top: 1px solid var(--line);
+.layout-control-groups {
+  display: grid;
+  gap: 9px;
+  margin-top: 10px;
 }
 
-.advanced-output-settings h3 {
+.layout-control-group {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+}
+
+.layout-control-group-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.layout-control-group-heading h3 {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.72rem;
+  color: var(--ink);
+  font-size: 0.73rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.layout-control-group-heading span {
+  color: var(--muted);
+  font-size: 0.66rem;
+  white-space: nowrap;
+}
+
+.layout-control-group > .hint {
+  margin: 4px 0 0;
+  font-size: 0.69rem;
+}
+
+.layout-control-group .layout-controls-grid {
+  margin-top: 8px;
+}
+
+.advanced-output-settings {
+  background: #f7f9ff;
 }
 
 .reset-layout {

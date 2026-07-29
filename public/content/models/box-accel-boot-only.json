@@ -25,11 +25,11 @@
   "defaultSku": "904722",
   "boxLogos": [
     "PS_small_CMYK",
-    "seg_FIT"
+    "PS_racing_badge"
   ],
   "sizeChartLogos": [
     "PS_small_CMYK",
-    "seg_FIT"
+    "PS_racing_badge"
   ],
   "materials": {
     "upper": "label_syntetic_material",
@@ -42,6 +42,9 @@
     "sizeLabelDouble": false,
     "boxLabel": true,
     "sizeChart": false
+  },
+  "titleSizes": {
+    "box": 4.2
   },
   "defaultProductImageId": "904722_accel_race_ti_boot_only.tif",
   "boxProductMode": "single",
