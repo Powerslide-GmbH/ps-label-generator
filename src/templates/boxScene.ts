@@ -24,6 +24,7 @@ export type BoxLayoutStrategy =
   | 'single-split-table'
   | 'dual-wide-table'
   | 'dual-compact-junior'
+  | 'dual-side-by-side-junior'
 
 export type BoxLayoutMeta = {
   strategy: BoxLayoutStrategy
@@ -270,8 +271,8 @@ function tableMetrics(density: TableDensity) {
       sysFs: 2.55,
       valFs: 2.35,
       sizePad: 2.5,
-      capsuleH: 2.9,
-      capsuleInset: 1.5,
+      capsuleH: 3.6,
+      capsuleInset: 0.8,
     }
   }
   if (density === 'compact') {
@@ -283,8 +284,8 @@ function tableMetrics(density: TableDensity) {
       sysFs: 3.0,
       valFs: 2.85,
       sizePad: 3.2,
-      capsuleH: 3.6,
-      capsuleInset: 2.0,
+      capsuleH: 4.3,
+      capsuleInset: 1.0,
     }
   }
   return {
@@ -295,8 +296,8 @@ function tableMetrics(density: TableDensity) {
     sysFs: 3.35,
     valFs: 3.1,
     sizePad: 3.6,
-    capsuleH: 4.0,
-    capsuleInset: 2.6,
+    capsuleH: 4.8,
+    capsuleInset: 1.2,
   }
 }
 
@@ -315,14 +316,6 @@ function drawBoxSizeTable(nodes: SceneNode[], opts: TableDrawOpts): number {
   const cols = Math.max(rows.length, 1)
   const colW = gridW / cols
   const sizeRowY = y + m.sizePad
-  // ACCEL-style: specifically tint the US Kids row; PDS adult: tint EU row;
-  // junior range tables keep zebra striping.
-  const highlightKids = systems.includes('US Kids') && systems.includes('US M')
-  const highlightLastEu =
-    !systems.includes('US Kids') &&
-    systems.length >= 4 &&
-    systems[systems.length - 1] === 'EU'
-
   nodes.push({
     type: 'text',
     x: gridX - 1.5,
@@ -348,15 +341,11 @@ function drawBoxSizeTable(nodes: SceneNode[], opts: TableDrawOpts): number {
   }
 
   const tableTop = y + sizeRowH
-  const useColumnStripe = density === 'dense' && cols >= 8
   systems.forEach((sys, rowIdx) => {
     const key = SIZE_SYSTEM_TO_KEY[sys]
     const rowTop = tableTop + rowIdx * rowH
     const rowMid = rowTop + rowH / 2
-    const tintKids = highlightKids && sys === 'US Kids'
-    const tintEu = highlightLastEu && sys === 'EU'
-    const zebra = !highlightKids && !highlightLastEu && rowIdx % 2 === 1
-    const tintRow = tintKids || tintEu || zebra
+    const tintRow = rowIdx % 2 === 1
     if (tintRow) {
       nodes.push({
         type: 'rect',
@@ -366,17 +355,6 @@ function drawBoxSizeTable(nodes: SceneNode[], opts: TableDrawOpts): number {
         h: rowH,
         fill: '#e9e9e9',
       })
-    } else if (useColumnStripe) {
-      for (let i = 0; i < cols; i += 2) {
-        nodes.push({
-          type: 'rect',
-          x: gridX + i * colW,
-          y: rowTop,
-          w: colW,
-          h: rowH,
-          fill: '#f0f0f0',
-        })
-      }
     }
     nodes.push({
       type: 'text',
@@ -519,8 +497,15 @@ function pickStrategy(
   dual: boolean,
   split: boolean,
   junior: boolean,
+  rowCount: number,
 ): BoxLayoutStrategy {
   if (dual) {
+    // Short dual-product ranges benefit from the same left-brand/right-table
+    // composition as Triple X. The rule is driven by the content and available
+    // canvas, not by the preset that happened to create the document.
+    if (rowCount <= 4) {
+      return 'dual-side-by-side-junior'
+    }
     return junior ? 'dual-compact-junior' : 'dual-wide-table'
   }
   return split ? 'single-split-table' : 'single-standard'
@@ -542,6 +527,7 @@ function drawFooter(
     footerLogos?: Array<{ href: string; aspectRatio: number }>
     footerLogoH?: number
     compact?: boolean
+    dual?: boolean
   },
 ): { top: number; height: number } {
   const {
@@ -558,6 +544,7 @@ function drawFooter(
     footerLogos = [],
     footerLogoH = 5,
     compact = false,
+    dual = false,
   } = args
   const footerBottom = labelY + labelH - marginBottom
   const leftX = labelX + marginX
@@ -567,14 +554,40 @@ function drawFooter(
   const company = companyLines(legal, display, compact)
   const regulatory = classLines(legal, display, compact)
 
-  let textTop = footerBottom
+  const footerLogoGap = compact ? 1.2 : 1.6
+  const footerLogoWidth = footerLogos.reduce(
+    (width, logo, index) =>
+      width + logo.aspectRatio * footerLogoH + (index ? footerLogoGap : 0),
+    0,
+  )
+  const logosAboveRegulatory =
+    dual && footerLogos.length > 0 && regulatory.length >= 2
+  let footerLogoY: number | null = null
+  let drawnFooterLogoWidth = 0
   if (footerLogos.length) {
-    const logoY = footerBottom - (company.length ? company.length * legalLineH + footerLogoH + 1.2 : footerLogoH)
-    drawLogoRow(nodes, footerLogos, leftX, logoY, footerLogoH, 0.45, labelW * 0.45)
-    if (!company.length) {
-      // PDS-style: logos + MADE IN share the footer row; push text baseline under logos.
-      textTop = logoY + footerLogoH
-    }
+    footerLogoY = logosAboveRegulatory
+      ? footerBottom -
+        regulatory.length * classLineH -
+        footerLogoH -
+        (compact ? 2.4 : 3)
+      : company.length
+        ? footerBottom -
+          company.length * legalLineH -
+          footerLogoH -
+          (compact ? 1.4 : 1.8)
+        : footerBottom - footerLogoH
+    const footerLogoX = logosAboveRegulatory
+      ? regRight - Math.min(footerLogoWidth, labelW * 0.38)
+      : leftX
+    drawnFooterLogoWidth = drawLogoRow(
+      nodes,
+      footerLogos,
+      footerLogoX,
+      footerLogoY,
+      footerLogoH,
+      footerLogoGap,
+      logosAboveRegulatory ? labelW * 0.38 : labelW * 0.46,
+    )
   }
 
   company.forEach((line, i) => {
@@ -604,19 +617,24 @@ function drawFooter(
   const iconH = compact ? 5.6 : 6.5
   const showMadeIn = display.showMadeIn && Boolean(legal.madeIn.trim())
   const madeInOnly = showMadeIn && company.length === 0 && regulatory.length === 0
+  const horizontalMadeIn =
+    madeInOnly && footerLogos.length > 0 && labelW >= 105
   // ACCEL-style: MADE IN alone sits bottom-right; PDS with logos sits after logo row.
   const iconX = madeInOnly
     ? footerLogos.length
       ? leftX +
-        footerLogos.reduce((w, l) => w + l.aspectRatio * footerLogoH + 0.45, 0) +
-        2
+        drawnFooterLogoWidth +
+        (compact ? 4 : 5)
       : labelX + labelW - Math.max(marginX, 8) - iconW
     : labelX + labelW * 0.58
+  const iconY = horizontalMadeIn
+    ? footerBottom - iconH
+    : madeInY - iconH - (compact ? 1.6 : 2.2)
   if (classLogoHref && (regulatory.length || showMadeIn)) {
     nodes.push({
       type: 'image',
       x: iconX,
-      y: madeInY - iconH - (compact ? 1.6 : 2.2),
+      y: iconY,
       w: iconW,
       h: iconH,
       href: classLogoHref,
@@ -624,27 +642,40 @@ function drawFooter(
     })
   }
   if (showMadeIn) {
-    const madeInX = iconX + iconW / 2
+    const madeInX = horizontalMadeIn
+      ? iconX + iconW + (compact ? 3.5 : 4)
+      : iconX + iconW / 2
     nodes.push({
       type: 'text',
       x: madeInX,
-      y: madeInY,
-      runs: [{ text: legal.madeIn.toUpperCase(), bold: false, fontSize: compact ? 2.35 : 2.6 }],
+      y: horizontalMadeIn
+        ? iconY + iconH / 2 + (compact ? 0.65 : 0.75)
+        : madeInY,
+      runs: [{ text: legal.madeIn.toUpperCase(), bold: false, fontSize: compact ? 1.65 : 1.85 }],
       fill: REG_MUTED,
-      anchor: 'middle',
+      anchor: horizontalMadeIn ? undefined : 'middle',
     })
   }
 
-  void textTop
-  // When logos share the MADE IN row (no company block), don't double-count logo height.
-  const logoExtra =
-    footerLogos.length && company.length
+  const baseFooterHeight = horizontalMadeIn
+    ? Math.max(footerLogoH, iconH) + (compact ? 1.6 : 2)
+    : estimateFooterHeight(
+        display,
+        legal,
+        Boolean(classLogoHref),
+        compact,
+      )
+  const regulatoryLogoStackH =
+    regulatory.length * classLineH +
+    footerLogoH +
+    (compact ? 2.4 : 3) +
+    1.5
+  const logoExtra = logosAboveRegulatory
+    ? Math.max(0, regulatoryLogoStackH - baseFooterHeight)
+    : footerLogos.length && company.length
       ? footerLogoH + 1.5
-      : footerLogos.length && !company.length
-        ? Math.max(0, footerLogoH - 2)
-        : 0
-  const height =
-    estimateFooterHeight(display, legal, Boolean(classLogoHref), compact) + logoExtra
+      : 0
+  const height = baseFooterHeight + logoExtra
   return { top: footerBottom - height + marginBottom * 0.2, height }
 }
 
@@ -702,14 +733,21 @@ export function buildResponsiveBoxLabelScene(
   const tightLayout =
     dual || preFlow.split || table.rows.length >= 10 || labelH <= 100 || labelW <= 125
   // PDS wide dual needs near-edge full-width table; ACCEL split keeps more inset.
-  const marginX =
+  const autoMarginX =
     dual && !junior
       ? Math.max(3.8, 4.6 * scale)
       : tightLayout
         ? Math.max(4.5, dual ? 5.2 * scale : 6.5 * scale)
         : Math.max(9, 12.5 * scale)
-  const marginTop = tightLayout ? Math.max(3.6, 5.2 * scale) : Math.max(6.5, 8.5 * scale)
-  const marginBottom = tightLayout ? Math.max(2.8, 3.6 * scale) : Math.max(5, 6.5 * scale)
+  const autoMarginTop = tightLayout
+    ? Math.max(3.6, 5.2 * scale)
+    : Math.max(6.5, 8.5 * scale)
+  const autoMarginBottom = tightLayout
+    ? Math.max(2.8, 3.6 * scale)
+    : Math.max(5, 6.5 * scale)
+  const marginX = doc.boxLayout.marginX ?? autoMarginX
+  const marginTop = doc.boxLayout.marginTop ?? autoMarginTop
+  const marginBottom = doc.boxLayout.marginBottom ?? autoMarginBottom
 
   const contentLeft = labelX + marginX
   const contentRight = labelX + labelW - marginX
@@ -734,16 +772,31 @@ export function buildResponsiveBoxLabelScene(
     productMode: doc.boxProductMode,
   })
 
-  const strategy = pickStrategy(dual, flow.split, junior)
+  const inferredStrategy = pickStrategy(
+    dual,
+    flow.split,
+    junior,
+    table.rows.length,
+  )
+  const requestedTemplate = doc.boxLayout.template
+  const templateMatchesMode =
+    requestedTemplate === 'auto' ||
+    (dual && requestedTemplate.startsWith('dual-')) ||
+    (!dual && requestedTemplate.startsWith('single-'))
+  const strategy =
+    requestedTemplate !== 'auto' && templateMatchesMode
+      ? requestedTemplate
+      : inferredStrategy
   // Triple X-style: tall enough dual/kids label with a short size run ? brand left, table right.
-  const sideBySideJunior =
-    strategy === 'dual-compact-junior' &&
-    table.rows.length <= 4 &&
-    labelH >= 108
-  // Rocket-style: logos sit on the table; PDS / Triple X keep logos in the footer band.
-  const logosOnTable =
-    strategy === 'single-split-table' ||
-    (strategy === 'dual-compact-junior' && !sideBySideJunior)
+  const sideBySideJunior = strategy === 'dual-side-by-side-junior'
+  // Sublogos follow the content mode: dual-product labels use the footer,
+  // while single-product labels keep them with the product/brand block.
+  const defaultLogoPlacement = dual ? 'footer' : 'brand'
+  const logoPlacement =
+    doc.boxLayout.logoPlacement === 'auto'
+      ? defaultLogoPlacement
+      : doc.boxLayout.logoPlacement
+  const logosOnTable = logoPlacement === 'table'
   const logoList = resolveLogos(logos)
   const logoH =
     strategy === 'dual-compact-junior'
@@ -795,9 +848,10 @@ export function buildResponsiveBoxLabelScene(
     display: doc.legalDisplay,
     companyFill,
     classLogoHref: assets.classLogoHref,
-    footerLogos: !logosOnTable ? logoList : [],
+    footerLogos: logoPlacement === 'footer' ? logoList : [],
     footerLogoH: logoH,
     compact: tightLayout || labelH <= 110,
+    dual,
   })
 
   const tableStartY = labelY + marginTop
@@ -854,6 +908,7 @@ export function buildResponsiveBoxLabelScene(
         h: wmH,
         href: wordmark,
         fit: 'contain',
+        alignX: 'left',
       })
       hy += wmH + 2.4
     }
@@ -874,7 +929,7 @@ export function buildResponsiveBoxLabelScene(
         nodes.push({
           type: 'text',
           x: contentLeft,
-          y: hy + i * (headerFs + 0.45),
+          y: hy + headerFs + i * (headerFs + 0.45),
           runs: line,
           fill: titleFill,
         })
@@ -913,7 +968,10 @@ export function buildResponsiveBoxLabelScene(
     }
   }
 
-  const brandTop = tablesBottom + (compact ? 2.4 : 4.2)
+  const tableToProductsGap =
+    strategy === 'dual-side-by-side-junior' ? 4.8 : compact ? 2.4 : 4.2
+  const brandTop =
+    tablesBottom + tableToProductsGap + doc.boxLayout.brandGapMm
   const brandBottomLimit = footer.top - 1.8
   const brandAreaH = Math.max(0, brandBottomLimit - brandTop)
 
@@ -922,11 +980,12 @@ export function buildResponsiveBoxLabelScene(
   const skuSize = compact ? 3.8 : 4.6
 
   if (dual) {
+    const requestedAlign = doc.boxLayout.wordmarkAlign
     layoutDualProducts(nodes, {
       doc,
       assets,
       productHref,
-      logos: logoList,
+      logos: logoPlacement === 'brand' ? logoList : [],
       logoH,
       strategy,
       contentLeft,
@@ -942,23 +1001,26 @@ export function buildResponsiveBoxLabelScene(
       markerStroke,
       overflow,
       compact,
-      skipLogos: true,
       wordmarkAlign:
-        strategy === 'dual-wide-table'
-          ? 'right'
-          : strategy === 'dual-compact-junior' && !sideBySideJunior
-            ? 'center'
-            : 'left',
+        requestedAlign !== 'auto'
+          ? requestedAlign
+          : strategy === 'dual-wide-table'
+            ? 'right'
+            : strategy === 'dual-compact-junior' && !sideBySideJunior
+              ? 'center'
+              : 'left',
     })
   } else {
     layoutSingleProduct(nodes, {
       doc,
       assets,
       productHref,
-      logos: logoList,
+      logos: logoPlacement === 'footer' ? [] : logoList,
+      logoPlacement,
       logoH,
       strategy,
       labelX,
+      labelY,
       labelW,
       labelH,
       contentLeft,
@@ -977,6 +1039,7 @@ export function buildResponsiveBoxLabelScene(
       tablesBottom,
       tableStartY,
       marginX,
+      marginBottom,
     })
   }
 
@@ -1023,9 +1086,11 @@ function layoutSingleProduct(
     assets: BoxSceneAssets
     productHref: string | null
     logos: Array<{ href: string; aspectRatio: number }>
+    logoPlacement: 'table' | 'brand' | 'footer'
     logoH: number
     strategy: BoxLayoutStrategy
     labelX: number
+    labelY: number
     labelW: number
     labelH: number
     contentLeft: number
@@ -1044,6 +1109,7 @@ function layoutSingleProduct(
     tablesBottom: number
     tableStartY: number
     marginX: number
+    marginBottom: number
   },
 ): void {
   const {
@@ -1051,9 +1117,11 @@ function layoutSingleProduct(
     assets,
     productHref,
     logos,
+    logoPlacement,
     logoH,
     strategy,
     labelX,
+    labelY,
     labelW,
     labelH,
     contentLeft,
@@ -1072,6 +1140,7 @@ function layoutSingleProduct(
     tablesBottom,
     tableStartY,
     marginX,
+    marginBottom,
   } = args
 
   const slot = doc.boxProducts[0] ?? {
@@ -1083,7 +1152,7 @@ function layoutSingleProduct(
   const href = productHrefFor(0, productHref, assets) || productHref
 
   // ACCEL-style: logos sit near the upper-right of the table band when split.
-  if (strategy === 'single-split-table' && logos.length) {
+  if (logoPlacement === 'table' && logos.length) {
     const logosWidth = logos.reduce((w, l) => w + l.aspectRatio * logoH + 0.5, -0.5)
     drawLogoRow(
       nodes,
@@ -1099,29 +1168,39 @@ function layoutSingleProduct(
   const textColW =
     strategy === 'single-split-table'
       ? href
-        ? contentW * 0.52
+        ? contentW * (doc.boxLayout.titleColumnPercent / 100)
         : contentW
       : href
-        ? contentW * 0.38
+        ? contentW * (doc.boxLayout.titleColumnPercent / 100)
         : contentW
   const singleTitleSize =
     strategy === 'single-split-table' ? Math.min(titleSize, 4.2) : titleSize
-  const wmH = Math.min(strategy === 'single-split-table' ? 8.5 : 8.2, Math.max(6.2, brandAreaH * 0.18))
+  const wordmarkScale = doc.boxLayout.wordmarkScale
+  const wmH =
+    Math.min(
+      strategy === 'single-split-table' ? 8.5 : 8.2,
+      Math.max(6.2, brandAreaH * 0.18),
+    ) * wordmarkScale
   let cursorY = brandTop
 
   if (wordmark) {
+    const wordmarkX =
+      strategy === 'single-split-table'
+        ? labelX + 1.8
+        : contentLeft
     const wmW = Math.min(
       strategy === 'single-split-table' ? textColW * 1.05 : textColW * 1.15,
-      66 * (labelW / 140),
+      66 * (labelW / 140) * wordmarkScale,
     )
     nodes.push({
       type: 'image',
-      x: contentLeft,
+      x: wordmarkX,
       y: cursorY,
       w: wmW,
       h: wmH,
       href: wordmark,
       fit: 'contain',
+      alignX: 'left',
     })
     cursorY += wmH + (compact ? 2.2 : 3.4)
   }
@@ -1135,7 +1214,10 @@ function layoutSingleProduct(
     nodes.push({
       type: 'text',
       x: contentLeft,
-      y: cursorY + i * (singleTitleSize + 0.75),
+      y:
+        cursorY +
+        singleTitleSize +
+        i * (singleTitleSize + 0.75),
       runs: line,
       fill: titleFill,
     })
@@ -1146,37 +1228,72 @@ function layoutSingleProduct(
     nodes.push({
       type: 'text',
       x: contentLeft,
-      y: cursorY + skuSize * 0.15,
+      y: cursorY + skuSize,
       runs: [{ text: slot.sku, bold: false, fontSize: skuSize }],
       fill: skuFill,
     })
     cursorY += skuSize + 2
   }
 
-  if (strategy !== 'single-split-table' && logos.length) {
+  if (logoPlacement === 'brand' && logos.length) {
     drawLogoRow(nodes, logos, contentLeft, cursorY, logoH, 0.6, textColW)
     cursorY += logoH + 1.6
   }
 
   if (href) {
-    const imgTop = Math.max(brandTop, tablesBottom + 3)
-    const imgMaxBottom = brandBottomLimit - 1.2
-    const maxH = Math.max(32, imgMaxBottom - imgTop)
+    const madeInOnly =
+      doc.legalDisplay.showMadeIn &&
+      Boolean(doc.legal.madeIn.trim()) &&
+      companyLines(doc.legal, doc.legalDisplay, compact).length === 0 &&
+      classLines(doc.legal, doc.legalDisplay, compact).length === 0
+    const imgTop =
+      strategy === 'single-split-table'
+        ? Math.max(tablesBottom + 0.8, brandTop - 2.2)
+        : Math.max(brandTop, tablesBottom + 3)
+    // With only the country mark in the footer, the product may share that
+    // lower band as long as it leaves a dedicated column on the right.
+    const shareMinimalFooter =
+      strategy === 'single-split-table' && madeInOnly
+    const imgMaxBottom = shareMinimalFooter
+      ? labelY + labelH - marginBottom
+      : brandBottomLimit - 1.2
+    // The footer can be only a small "Made in" band. Never force a 32 mm
+    // image through that boundary when the table leaves less room.
+    const maxH = Math.max(12, imgMaxBottom - imgTop)
     if (strategy === 'single-split-table') {
-      const imgW = Math.min(82 * (labelW / 140), contentW * 0.62)
-      const imgH = Math.min(maxH, labelH * 0.48, 58)
+      const imageLeft = contentLeft + textColW + 4
+      const imageRight = contentRight - (shareMinimalFooter ? 13 : 0)
+      const imageAreaW = Math.max(24, imageRight - imageLeft)
+      const imgW = Math.min(
+        imageAreaW * 0.92,
+        Math.min(82 * (labelW / 140), contentW * 0.62) *
+          doc.boxLayout.productImageScale,
+      )
+      const imgH = Math.min(
+        maxH,
+        Math.min(labelH * 0.49, 59) * doc.boxLayout.productImageScale,
+      )
       nodes.push({
         type: 'image',
-        x: labelX + labelW - marginX - imgW - 1,
+        x: imageLeft + (imageAreaW - imgW) / 2,
         y: imgTop,
         w: imgW,
         h: imgH,
         href,
         fit: 'contain',
+        alignX: 'center',
+        alignY: 'bottom',
       })
     } else {
-      const imgW = Math.min(72 * (labelW / 140), contentW * 0.54)
-      const imgH = Math.min(maxH, labelH * 0.46, 58)
+      const imgW = Math.min(
+        contentW * 0.65,
+        Math.min(72 * (labelW / 140), contentW * 0.54) *
+          doc.boxLayout.productImageScale,
+      )
+      const imgH = Math.min(
+        maxH,
+        Math.min(labelH * 0.46, 58) * doc.boxLayout.productImageScale,
+      )
       nodes.push({
         type: 'image',
         x: labelX + labelW - marginX - imgW,
@@ -1185,6 +1302,8 @@ function layoutSingleProduct(
         h: imgH,
         href,
         fit: 'contain',
+        alignX: 'right',
+        alignY: 'bottom',
       })
     }
   }
@@ -1202,7 +1321,7 @@ function layoutSingleProduct(
   ) {
     overflow.push({
       block: 'title',
-      message: 'Product title wraps heavily ? shorten the title or widen the label.',
+      message: 'Product title wraps heavily; shorten the title or widen the label.',
     })
   }
 }
@@ -1229,7 +1348,6 @@ function layoutDualProducts(
     markerStroke: string
     overflow: LayoutOverflow[]
     compact: boolean
-    skipLogos?: boolean
     wordmarkAlign?: 'left' | 'center' | 'right'
   },
 ): void {
@@ -1237,6 +1355,8 @@ function layoutDualProducts(
     doc,
     assets,
     productHref,
+    logos,
+    logoH,
     strategy,
     contentLeft,
     contentRight,
@@ -1282,7 +1402,7 @@ function layoutDualProducts(
         ? 5.8
         : 7.2,
     Math.max(5.2, brandAreaH * (wordmarkAlign === 'center' ? 0.18 : 0.14)),
-  )
+  ) * doc.boxLayout.wordmarkScale
 
   // Always draw shared wordmark when provided (PDS right / Rocket center / other left).
   if (wordmark) {
@@ -1292,26 +1412,77 @@ function layoutDualProducts(
         : wordmarkAlign === 'right'
           ? Math.min(contentW * 0.48, 58)
           : Math.min(contentW * 0.42, 52)
+    const scaledW = wmW * doc.boxLayout.wordmarkScale
     const x =
       wordmarkAlign === 'right'
-        ? contentRight - wmW
+        ? contentRight - scaledW
         : wordmarkAlign === 'center'
-          ? contentLeft + (contentW - wmW) / 2
+          ? contentLeft + (contentW - scaledW) / 2
           : contentLeft
     nodes.push({
       type: 'image',
       x,
       y: cursorY,
-      w: wmW,
+      w: scaledW,
       h: wmH,
       href: wordmark,
       fit: 'contain',
+      alignX: wordmarkAlign,
     })
     cursorY += wmH + (compact ? 1.4 : 2.2)
   }
 
+  if (
+    strategy !== 'dual-side-by-side-junior' &&
+    plainText(doc.title).trim()
+  ) {
+    const sharedTitleSize = Math.min(titleSize, compact ? 3.35 : 4)
+    const sharedTitleWidth =
+      wordmarkAlign === 'right' ? contentW * 0.56 : contentW * 0.72
+    const sharedTitleX =
+      wordmarkAlign === 'right'
+        ? contentRight
+        : wordmarkAlign === 'center'
+          ? contentLeft + contentW / 2
+          : contentLeft
+    const sharedLines = wrapTextRuns(
+      doc.title.map((run) => ({
+        text: run.text,
+        bold: run.bold !== false,
+        fontSize: sharedTitleSize,
+      })),
+      sharedTitleSize,
+      sharedTitleWidth,
+    ).slice(0, 2)
+    sharedLines.forEach((line, index) => {
+      nodes.push({
+        type: 'text',
+        x: sharedTitleX,
+        y: cursorY + sharedTitleSize + index * (sharedTitleSize + 0.45),
+        runs: line,
+        fill: titleFill,
+        anchor:
+          wordmarkAlign === 'right'
+            ? 'end'
+            : wordmarkAlign === 'center'
+              ? 'middle'
+              : undefined,
+      })
+    })
+    cursorY +=
+      sharedLines.length * (sharedTitleSize + 0.45) + (compact ? 2.2 : 2.8)
+  }
+
+  if (logos.length) {
+    drawLogoRow(nodes, logos, contentLeft, cursorY, logoH, 0.6, contentW * 0.5)
+    cursorY += logoH + (compact ? 1.2 : 1.8)
+  }
+
   const productBottomLimit = brandTop + brandAreaH
   const dualTitleSize = Math.min(titleSize, compact ? 3.15 : 3.7)
+  const sparseFooter =
+    companyLines(doc.legal, doc.legalDisplay, compact).length === 0 &&
+    classLines(doc.legal, doc.legalDisplay, compact).length === 0
   const remaining = Math.max(18, productBottomLimit - cursorY)
   // Bias remaining height toward product photos (refs show large images).
   const textReserve =
@@ -1333,23 +1504,28 @@ function layoutDualProducts(
       nodes.push({
         type: 'text',
         x: colX,
-        y: y + li * (dualTitleSize + 0.4),
+        y: y + dualTitleSize + li * (dualTitleSize + 0.4),
         runs: line,
         fill: titleFill,
       })
     })
     y += Math.min(titleLines.length, 2) * (dualTitleSize + 0.4) + 0.25
 
-    if (slot.subtitle?.trim()) {
+    const subtitle = slot.subtitle?.trim()
+    if (subtitle) {
       const subFs = Math.max(2.35, dualTitleSize * 0.52)
       nodes.push({
         type: 'text',
         x: colX,
-        y: y + subFs * 0.2,
-        runs: [{ text: slot.subtitle, bold: false, fontSize: subFs }],
+        y: y + subFs,
+        runs: [{ text: subtitle, bold: false, fontSize: subFs }],
         fill: titleFill,
       })
-      y += subFs + 0.4
+      y += subFs + (compact ? 1.2 : 1.6)
+    } else {
+      // Preserve the same visual separation before the SKU/capsule row when
+      // there is no subtitle; otherwise the capsule touches the title line.
+      y += compact ? 1.2 : 1.6
     }
 
     if (slot.sku.trim()) {
@@ -1359,22 +1535,22 @@ function layoutDualProducts(
       nodes.push({
         type: 'text',
         x: colX,
-        y: y + skuFs * 0.15,
+        y: y + skuFs,
         runs: [{ text: skuText, bold: false, fontSize: skuFs }],
         fill: skuFill,
       })
       // Empty rounded mark box next to SKU (production checkbox ? rect, not circle).
-      const markW = Math.max(5.2, skuFs * 1.45)
-      const markH = Math.max(3.0, skuFs * 0.85)
+      const markW = Math.max(7.2, skuFs * 2)
+      const markH = Math.max(3.8, skuFs * 1.05)
       nodes.push({
         type: 'rect',
-        x: colX + skuW + 1.4,
-        y: y - markH * 0.55,
+        x: colX + skuW + 1.7,
+        y: y + (skuFs - markH) / 2,
         w: markW,
         h: markH,
         stroke: markerStroke,
-        strokeWidth: 0.28,
-        radius: Math.min(1.6, markH * 0.35),
+        strokeWidth: 0.32,
+        radius: Math.min(1.9, markH * 0.42),
         fill: 'none',
       })
       y += skuFs + 0.7
@@ -1383,8 +1559,26 @@ function layoutDualProducts(
     const href = productHrefFor(i, productHref, assets, slot.imagePath)
     if (href) {
       const availH = Math.max(16, productBottomLimit - y)
-      const h = Math.min(Math.max(imageH, availH * 0.94), availH)
-      const imgW = Math.min(colW * 0.99, h * 1.45)
+      const baseH = Math.min(Math.max(imageH, availH * 0.94), availH)
+      const h = Math.min(
+        availH,
+        baseH * doc.boxLayout.productImageScale,
+      )
+      const imgW = Math.min(
+        colW *
+          (sparseFooter
+            ? 0.96
+            : strategy === 'dual-side-by-side-junior'
+              ? 1.12
+              : 1.06),
+        h *
+          (sparseFooter
+            ? 2.08
+            : strategy === 'dual-side-by-side-junior'
+              ? 1.85
+              : 1.62) *
+          doc.boxLayout.productImageScale,
+      )
       nodes.push({
         type: 'image',
         x: colX + (colW - imgW) / 2,

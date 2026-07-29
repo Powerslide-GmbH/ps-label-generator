@@ -14,8 +14,12 @@
   "mode": "dual",
   "defaultTitle": [
     {
-      "text": "ZOOM TORELLI PRO 80",
+      "text": "ZOOM TORELLI ",
       "bold": true
+    },
+    {
+      "text": "PRO 80",
+      "bold": false
     }
   ],
   "defaultSku": "908472",
@@ -39,7 +43,16 @@
     "boxLabel": true,
     "sizeChart": true
   },
-  "defaultProductImageId": "908482_Zoom_Pro_90_Sand_2026_view01.tif",
+  "defaultProductImageId": "908472_zoom_torelli_pro_80.jpg",
+  "boxLayout": {
+    "template": "auto",
+    "logoPlacement": "auto",
+    "wordmarkAlign": "auto",
+    "wordmarkScale": 0.9,
+    "productImageScale": 1,
+    "titleColumnPercent": 58,
+    "brandGapMm": 1
+  },
   "sizeTable": {
     "id": "ps-urban-zoom-torelli",
     "name": "PS-Urban-ZOOM-Torelli",

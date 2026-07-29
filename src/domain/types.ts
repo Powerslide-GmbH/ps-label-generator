@@ -83,6 +83,40 @@ export type BoxTableFlow = {
   splitIndex?: number
 }
 
+export type BoxLayoutTemplate =
+  | 'auto'
+  | 'single-standard'
+  | 'single-split-table'
+  | 'dual-wide-table'
+  | 'dual-compact-junior'
+  | 'dual-side-by-side-junior'
+
+export type BoxLogoPlacement = 'auto' | 'table' | 'brand' | 'footer'
+
+/**
+ * Fine-grained box layout controls stored with each preset.
+ *
+ * Values are deliberately relative/semantic where possible so a preset remains
+ * useful after changing the physical label size.
+ */
+export type BoxLayoutSettings = {
+  template: BoxLayoutTemplate
+  logoPlacement: BoxLogoPlacement
+  wordmarkAlign: 'auto' | 'left' | 'center' | 'right'
+  /** Scale applied to the template wordmark dimensions. */
+  wordmarkScale: number
+  /** Scale applied to product images in both single and dual layouts. */
+  productImageScale: number
+  /** Width of the single-product text column as a percentage of content width. */
+  titleColumnPercent: number
+  /** Extra vertical space between the table and brand/product region, in mm. */
+  brandGapMm: number
+  /** Optional explicit content margins, in mm. */
+  marginX?: number
+  marginTop?: number
+  marginBottom?: number
+}
+
 export type PdfFontMode = 'outlined' | 'editable'
 
 export type BoxTextColorMode = 'pure-k' | 'brand'
@@ -98,8 +132,9 @@ export type LogoRef =
       mime: string
       data: string
       aspectRatio: number
-      /** True when source is a CMYK PDF (recommended). */
+      /** PDF artwork is embedded unchanged, preserving its vectors and source colors. */
       cmykPreserving?: boolean
+      sourceFormat?: 'pdf' | 'svg' | 'raster'
     }
 
 export type OutputSelection = {
@@ -146,6 +181,11 @@ export type TitleSizes = {
   sizeChart: number
 }
 
+export type SizeLabelSheetSettings = {
+  normalColumns: number
+  doubleColumns: number
+}
+
 /** One product preset: branding + outputs + embedded size table. */
 export type ModelPreset = {
   id: string
@@ -169,6 +209,7 @@ export type ModelPreset = {
   sizeChartLogos: string[]
   materials?: MaterialSelection
   titleSizes?: Partial<TitleSizes>
+  sizeLabelSheet?: Partial<SizeLabelSheetSettings>
   legalProfileId: string
   outputs: OutputSelection
   defaultProductImageId?: string
@@ -177,6 +218,7 @@ export type ModelPreset = {
   boxDimensionsMm?: BoxDimensionsMm
   enabledSizeSystems?: SizeSystem[]
   boxTableFlow?: BoxTableFlow
+  boxLayout?: Partial<BoxLayoutSettings>
   legalDisplay?: LegalDisplayOptions
   pdfFontMode?: PdfFontMode
   boxTextColorMode?: BoxTextColorMode
@@ -198,6 +240,7 @@ export type LabelDocument = {
   sizeChartLogos: string[]
   materials: MaterialSelection
   titleSizes: TitleSizes
+  sizeLabelSheet: SizeLabelSheetSettings
   sizeChartId: string
   mode: SizeGroupMode
   legal: LegalProfile
@@ -208,6 +251,7 @@ export type LabelDocument = {
   boxDimensionsMm: BoxDimensionsMm
   enabledSizeSystems: SizeSystem[]
   boxTableFlow: BoxTableFlow
+  boxLayout: BoxLayoutSettings
   legalDisplay: LegalDisplayOptions
   pdfFontMode: PdfFontMode
   boxTextColorMode: BoxTextColorMode
@@ -331,6 +375,11 @@ export const DEFAULT_TITLE_SIZES: TitleSizes = {
   sizeChart: 38,
 }
 
+export const DEFAULT_SIZE_LABEL_SHEET: SizeLabelSheetSettings = {
+  normalColumns: 4,
+  doubleColumns: 2,
+}
+
 export const DEFAULT_LEGAL_DISPLAY: LegalDisplayOptions = {
   showCompany: true,
   showPostalAddress: false,
@@ -355,4 +404,14 @@ export const DEFAULT_BOX_DIMENSIONS_MM: BoxDimensionsMm = {
 
 export const DEFAULT_BOX_TABLE_FLOW: BoxTableFlow = { mode: 'auto' }
 
-export const STORAGE_VERSION = 5
+export const DEFAULT_BOX_LAYOUT: BoxLayoutSettings = {
+  template: 'auto',
+  logoPlacement: 'auto',
+  wordmarkAlign: 'auto',
+  wordmarkScale: 1,
+  productImageScale: 1,
+  titleColumnPercent: 50,
+  brandGapMm: 0,
+}
+
+export const STORAGE_VERSION = 6

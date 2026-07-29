@@ -14,8 +14,12 @@
   "mode": "dual",
   "defaultTitle": [
     {
-      "text": "ACCEL EVO PDS",
+      "text": "ACCEL EVO ",
       "bold": true
+    },
+    {
+      "text": "PDS",
+      "bold": false
     }
   ],
   "defaultSku": "904723",
@@ -39,32 +43,40 @@
     "boxLabel": true,
     "sizeChart": false
   },
-  "defaultProductImageId": "908482_Zoom_Pro_90_Sand_2026_view01.tif",
+  "defaultProductImageId": "904723_accel_evo_pds_pink.tif",
   "boxProductMode": "dual",
   "boxProducts": [
     {
       "title": [
         {
-          "text": "ACCEL EVO PDS Pink",
+          "text": "ACCEL EVO PDS ",
           "bold": true
+        },
+        {
+          "text": "Pink",
+          "bold": false
         }
       ],
       "subtitle": "BOOT ONLY",
       "sku": "904723",
-      "imageName": "908482_Zoom_Pro_90_Sand_2026_view01.tif",
-      "imagePath": "content/products/908482_Zoom_Pro_90_Sand_2026_view01.tif"
+      "imageName": "904723_accel_evo_pds_pink.tif",
+      "imagePath": "content/products/904723_accel_evo_pds_pink.tif"
     },
     {
       "title": [
         {
-          "text": "ACCEL EVO PDS Silver",
+          "text": "ACCEL EVO PDS ",
           "bold": true
+        },
+        {
+          "text": "Silver",
+          "bold": false
         }
       ],
       "subtitle": "BOOT ONLY",
       "sku": "904724",
-      "imageName": "908464-42265_PS_Next_Edge_150_2025_view01.tif",
-      "imagePath": "content/products/908464-42265_PS_Next_Edge_150_2025_view01.tif"
+      "imageName": "904724_accel_evo_pds_silver.tif",
+      "imagePath": "content/products/904724_accel_evo_pds_silver.tif"
     }
   ],
   "boxDimensionsMm": {
@@ -80,6 +92,15 @@
   ],
   "boxTableFlow": {
     "mode": "auto"
+  },
+  "boxLayout": {
+    "template": "auto",
+    "logoPlacement": "auto",
+    "wordmarkAlign": "auto",
+    "wordmarkScale": 0.82,
+    "productImageScale": 1.3,
+    "titleColumnPercent": 50,
+    "brandGapMm": 0
   },
   "legalDisplay": {
     "showCompany": false,

@@ -63,6 +63,8 @@ export type SceneImage = {
   h: number
   href: string
   fit?: 'contain' | 'cover'
+  alignX?: 'left' | 'center' | 'right'
+  alignY?: 'top' | 'center' | 'bottom'
 }
 
 export type SceneNode = SceneText | SceneRect | SceneLine | SceneImage
@@ -646,6 +648,9 @@ export function buildSizeLabelScene(
     marginTop: headerH,
     marginBottom: footerH,
     marginX: double ? 10 : 8,
+    maxColumns: double
+      ? doc.sizeLabelSheet.doubleColumns
+      : doc.sizeLabelSheet.normalColumns,
     minPage: sheet,
   })
   const nodes: SceneNode[] = [
@@ -737,42 +742,50 @@ export function buildSizeChartScene(
   ]
 
   const logos = logoHrefs.filter(Boolean).slice(0, 3)
-  const logoSize = 70
-  const logoGap = 18
-  const logoStartX = 40
-  const logoY = 36
+  const logoW = 82
+  const logoGap = 14
+  const logoY = 28
   logos.forEach((href, i) => {
     nodes.push({
       type: 'image',
-      x: logoStartX + i * (logoSize + logoGap),
+      x: 40 + i * (logoW + logoGap),
       y: logoY,
-      w: logoSize,
-      h: logoSize,
+      w: logoW,
+      h: 54,
       href,
       fit: 'contain',
     })
   })
 
-  const titleX =
-    logos.length > 0
-      ? logoStartX + logos.length * (logoSize + logoGap) + 8
-      : logoStartX
-
+  const titleX = logos.length ? 40 + logos.length * (logoW + logoGap) + 18 : 40
   nodes.push({
     type: 'text',
     x: titleX,
-    y: 82,
-    runs: titleRuns(doc, doc.titleSizes.sizeChart),
-    fill: '#111',
+    y: 66,
+    runs: titleRuns(doc, Math.min(doc.titleSizes.sizeChart, 40)),
+    fill: '#111111',
   })
 
   const systems = systemsForBoxTable(table, doc.enabledSizeSystems)
   const tableX = 40
-  const tableY = 140
+  const tableY = 112
   const tableW = w - 80
-  const rowH = 72
-  const labelW = 140
+  const rowH = Math.min(68, (h - tableY - 72) / Math.max(systems.length, 1))
+  const labelW = 142
   const colW = (tableW - labelW) / Math.max(table.rows.length, 1)
+  const tableH = rowH * systems.length
+  const valueFontSize = Math.max(15, Math.min(24, colW * 0.43))
+
+  nodes.push({
+    type: 'rect',
+    x: tableX,
+    y: tableY,
+    w: tableW,
+    h: tableH,
+    fill: '#ffffff',
+    stroke: '#bdbdbd',
+    strokeWidth: 1.5,
+  })
 
   systems.forEach((sys, rowIdx) => {
     const key = SIZE_SYSTEM_TO_KEY[sys]
@@ -780,11 +793,11 @@ export function buildSizeChartScene(
     if (rowIdx % 2 === 1) {
       nodes.push({
         type: 'rect',
-        x: tableX + labelW,
+        x: tableX,
         y: yy,
-        w: tableW - labelW,
+        w: tableW,
         h: rowH,
-        fill: '#ececec',
+        fill: '#eeeeee',
       })
     }
     nodes.push({
@@ -793,50 +806,67 @@ export function buildSizeChartScene(
       y1: yy,
       x2: tableX + labelW,
       y2: yy + rowH,
-      stroke: '#ccc',
+      stroke: '#c8c8c8',
       strokeWidth: 1,
     })
     nodes.push({
       type: 'text',
-      x: tableX + 10,
+      x: tableX + 22,
       y: yy + rowH / 2 + 8,
-      runs: [{ text: sys, bold: true, fontSize: 26 }],
-      fill: '#111',
+      runs: [{ text: sys, bold: true, fontSize: 22 }],
+      fill: '#111111',
     })
     table.rows.forEach((row, i) => {
       const cx = tableX + labelW + i * colW + colW / 2
-      nodes.push({
-        type: 'line',
-        x1: tableX + labelW + i * colW,
-        y1: yy,
-        x2: tableX + labelW + i * colW,
-        y2: yy + rowH,
-        stroke: '#ddd',
-        strokeWidth: 1,
-      })
+      if (i > 0) {
+        nodes.push({
+          type: 'line',
+          x1: tableX + labelW + i * colW,
+          y1: yy + 12,
+          x2: tableX + labelW + i * colW,
+          y2: yy + rowH - 12,
+          stroke: '#d5d5d5',
+          strokeWidth: 1,
+        })
+      }
       nodes.push({
         type: 'text',
         x: cx,
         y: yy + rowH / 2 + 8,
-        runs: [{ text: row[key] || '', bold: false, fontSize: 24 }],
-        fill: '#111',
+        runs: [
+          {
+            text: row[key] || '-',
+            bold: false,
+            fontSize: valueFontSize,
+          },
+        ],
+        fill: '#222222',
         anchor: 'middle',
       })
     })
   })
 
+  const footerY = Math.min(h - 24, tableY + tableH + 34)
   nodes.push({
     type: 'text',
     x: 40,
-    y: h - 36,
+    y: footerY,
     runs: [
       {
         text: doc.sizeChartFootnote || plainText(doc.title),
         bold: false,
-        fontSize: 20,
+        fontSize: 15,
       },
     ],
-    fill: '#222',
+    fill: '#333333',
+  })
+  nodes.push({
+    type: 'text',
+    x: w - 40,
+    y: footerY,
+    runs: [{ text: table.name, bold: false, fontSize: 14 }],
+    fill: '#666666',
+    anchor: 'end',
   })
 
   return {

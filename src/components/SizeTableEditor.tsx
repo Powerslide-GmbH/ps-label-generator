@@ -25,6 +25,30 @@ type Props = {
 }
 
 type ClassSelect = 'default' | 'adult-class-a' | 'kids-class-b' | 'none'
+type RowActionIconName = 'up' | 'down' | 'copy' | 'delete'
+
+function RowActionIcon({ name }: { name: RowActionIconName }) {
+  if (name === 'copy') {
+    return (
+      <svg viewBox="0 0 20 20" aria-hidden>
+        <rect x="6.5" y="6.5" width="9" height="9" rx="1.8" />
+        <path d="M5 13.5H4.5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2V5" />
+      </svg>
+    )
+  }
+  if (name === 'delete') {
+    return (
+      <svg viewBox="0 0 20 20" aria-hidden>
+        <path d="M3.5 5.5h13M7.2 5.5V3.7h5.6v1.8M6 7.5l.7 8h6.6l.7-8M8.3 8.7v4.7M11.7 8.7v4.7" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden>
+      <path d={name === 'up' ? 'm5.5 12.5 4.5-5 4.5 5' : 'm5.5 7.5 4.5 5 4.5-5'} />
+    </svg>
+  )
+}
 
 const BASE_COLS: Array<{ key: keyof SizeRow; label: string }> = [
   { key: 'mondo', label: 'MONDO' },
@@ -105,7 +129,6 @@ export function SizeTableEditor({
 
   function removeRow(index: number) {
     if (value.rows.length <= 1) return
-    if (!window.confirm(`Delete size row ${index + 1}?`)) return
     onChange({
       ...value,
       rows: value.rows.filter((_, i) => i !== index),
@@ -211,27 +234,47 @@ export function SizeTableEditor({
                   </select>
                 </td>
                 <td className="row-tools">
-                  <button type="button" title="Move up" onClick={() => moveRow(i, -1)}>
-                    {'\u25B2'}
-                  </button>
-                  <button type="button" title="Move down" onClick={() => moveRow(i, 1)}>
-                    {'\u25BC'}
-                  </button>
-                  <button
-                    type="button"
-                    title="Duplicate row"
-                    onClick={() => duplicateRow(i)}
-                  >
-                    {'\u2398'}
-                  </button>
-                  <button
-                    type="button"
-                    title="Delete row"
-                    onClick={() => removeRow(i)}
-                    disabled={value.rows.length <= 1}
-                  >
-                    {'\u00D7'}
-                  </button>
+                  <div className="row-tool-group">
+                    <button
+                      type="button"
+                      className="row-tool move"
+                      title="Move row up"
+                      aria-label={`Move row ${i + 1} up`}
+                      onClick={() => moveRow(i, -1)}
+                      disabled={i === 0}
+                    >
+                      <RowActionIcon name="up" />
+                    </button>
+                    <button
+                      type="button"
+                      className="row-tool move"
+                      title="Move row down"
+                      aria-label={`Move row ${i + 1} down`}
+                      onClick={() => moveRow(i, 1)}
+                      disabled={i === value.rows.length - 1}
+                    >
+                      <RowActionIcon name="down" />
+                    </button>
+                    <button
+                      type="button"
+                      className="row-tool duplicate"
+                      title="Duplicate row"
+                      aria-label={`Duplicate row ${i + 1}`}
+                      onClick={() => duplicateRow(i)}
+                    >
+                      <RowActionIcon name="copy" />
+                    </button>
+                    <button
+                      type="button"
+                      className="row-tool delete"
+                      title="Delete row"
+                      aria-label={`Delete row ${i + 1}`}
+                      onClick={() => removeRow(i)}
+                      disabled={value.rows.length <= 1}
+                    >
+                      <RowActionIcon name="delete" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

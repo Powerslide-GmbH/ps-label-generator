@@ -1,6 +1,6 @@
 {
   "id": "box-standard-140",
-  "name": "Box Standard 140×120",
+  "name": "Box Standard 140Ã—120",
   "brandColorHex": "#416BE0",
   "brandColorCmyk": {
     "c": 0.76,
@@ -14,8 +14,12 @@
   "mode": "single",
   "defaultTitle": [
     {
-      "text": "ZOOM TORELLI PRO 80",
+      "text": "ZOOM TORELLI ",
       "bold": true
+    },
+    {
+      "text": "PRO 80",
+      "bold": false
     }
   ],
   "defaultSku": "908472",
@@ -39,7 +43,7 @@
     "boxLabel": true,
     "sizeChart": false
   },
-  "defaultProductImageId": "908482_Zoom_Pro_90_Sand_2026_view01.tif",
+  "defaultProductImageId": "908472_zoom_torelli_pro_80.jpg",
   "boxProductMode": "single",
   "boxDimensionsMm": {
     "width": 140,
@@ -54,6 +58,15 @@
   ],
   "boxTableFlow": {
     "mode": "auto"
+  },
+  "boxLayout": {
+    "template": "auto",
+    "logoPlacement": "auto",
+    "wordmarkAlign": "auto",
+    "wordmarkScale": 0.9,
+    "productImageScale": 1,
+    "titleColumnPercent": 58,
+    "brandGapMm": 1
   },
   "legalDisplay": {
     "showCompany": true,

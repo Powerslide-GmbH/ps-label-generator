@@ -54,12 +54,12 @@ import {
 } from '@/templates/scenes'
 import { buildExports } from '@/export/pdfExport'
 import { downloadExports } from '@/export/download'
-import { decodeImageFile, canvasToSquare } from '@/export/imageDecode'
+import { decodeImageFile } from '@/export/imageDecode'
 import {
   emptyBoxProductSlot,
   syncPrimaryProductFields,
 } from '@/domain/boxConfig'
-import { hexToRgb, rgbToCmykApprox } from '@/export/cmyk'
+import { cmykToHex, hexToRgb, rgbToCmykApprox } from '@/export/cmyk'
 import { parseAppUrl, syncAppUrl, type AppTab } from '@/app/urlState'
 import './App.css'
 
@@ -114,13 +114,27 @@ function applyBrandHex(doc: LabelDocument, hex: string): LabelDocument {
   }
 }
 
+function applyBrandCmyk(
+  doc: LabelDocument,
+  channel: keyof LabelDocument['brandColorCmyk'],
+  percent: number,
+): LabelDocument {
+  return {
+    ...doc,
+    brandColorCmyk: {
+      ...doc.brandColorCmyk,
+      [channel]: Math.max(0, Math.min(100, percent)) / 100,
+    },
+  }
+}
+
 async function resolveProductPreview(pathOrUrl: string): Promise<string> {
   const lower = pathOrUrl.toLowerCase()
   if (lower.startsWith('data:')) return pathOrUrl
   if (!lower.match(/\.tiff?($|\?)/)) return pathOrUrl
   const res = await fetch(pathOrUrl)
   const blob = await res.blob()
-  const canvas = canvasToSquare(await decodeImageFile(blob))
+  const canvas = await decodeImageFile(blob)
   return canvas.toDataURL('image/jpeg', 0.9)
 }
 
@@ -153,6 +167,7 @@ export default function App() {
   )
   const [tab, setTab] = useState<Tab>('box')
   const [showPrintGuides, setShowPrintGuides] = useState(true)
+  const [simulateCmyk, setSimulateCmyk] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [productPreviewUrl, setProductPreviewUrl] = useState<string | null>(null)
@@ -426,7 +441,7 @@ export default function App() {
   async function onProductFile(file: File | null, slotIndex = 0) {
     if (!file) return
     try {
-      const canvas = canvasToSquare(await decodeImageFile(file))
+      const canvas = await decodeImageFile(file)
       const url = canvas.toDataURL('image/jpeg', 0.92)
       setDoc((d) => {
         const products = ensureBoxProducts(d)
@@ -476,21 +491,18 @@ export default function App() {
         boxProductMode: 'dual',
         boxProducts: next,
         boxTableFlow: { mode: 'auto' },
+        boxLayout: { ...doc.boxLayout, template: 'auto' },
       })
-      return
-    }
-    if (
-      doc.boxProductMode === 'dual' &&
-      !window.confirm('Switch to Single and discard Product 2?')
-    ) {
       return
     }
     setDoc(
       syncPrimaryProductFields({
         ...doc,
         boxProductMode: 'single',
-        boxProducts: [ensureBoxProducts(doc)[0]],
+        // Keep Product 2 in the document so switching modes is reversible.
+        boxProducts: ensureBoxProducts(doc),
         boxTableFlow: { mode: 'auto' },
+        boxLayout: { ...doc.boxLayout, template: 'auto' },
       }),
     )
   }
@@ -653,7 +665,7 @@ export default function App() {
       list.push({
         key: 'sizechart',
         scene: scenes.sizechart,
-        filename: `${exportBasename(doc.sku, title, 'sizechart')}.jpg`,
+        filename: `${exportBasename(doc.sku, title, 'sizechart')}.webp`,
       })
     }
     if (!list.length) {
@@ -709,14 +721,33 @@ export default function App() {
     }))
   }
 
+  const selectedOutputCount = Object.values(doc.outputs).filter(Boolean).length
+  const currentPresetName =
+    allPresets.find((preset) => preset.id === doc.presetId)?.name ??
+    'Custom label'
+  const activeOutputLabel =
+    tab === 'size-normal'
+      ? 'A4 · 45 × 30 mm · K-only PDF'
+      : tab === 'size-double'
+        ? '206 × 131 mm · 76 × 23 mm · K-only PDF'
+        : tab === 'box'
+          ? `${doc.boxDimensionsMm.width} × ${doc.boxDimensionsMm.height} mm · CMYK PDF`
+          : '1200 × 600 px · WebP'
+
   return (
     <div className="app">
       <header className="top">
-        <div>
-          <h1>PS Labels Generator</h1>
-          <p className="sub">
-            Local tool · JSON catalog · CMYK PDF · size chart JPG
-          </p>
+        <div className="app-brand">
+          <span className="app-mark" aria-hidden>
+            PS
+          </span>
+          <div>
+            <div className="app-title-row">
+              <h1>Labels Generator</h1>
+              <span className="local-badge">Local</span>
+            </div>
+            <p className="sub">Production labels · CMYK PDF · WebP</p>
+          </div>
         </div>
         <div className="header-export top-actions">
           <label className="pdf-font-mode">
@@ -742,7 +773,11 @@ export default function App() {
             onChange={(outputs) => setDoc({ ...doc, outputs })}
           />
           <button className="primary" disabled={busy} onClick={exportSelected}>
-            {busy ? 'Exporting...' : 'Export selected'}
+            {busy
+              ? 'Exporting...'
+              : `Export ${selectedOutputCount} ${
+                  selectedOutputCount === 1 ? 'file' : 'files'
+                }`}
           </button>
         </div>
       </header>
@@ -751,7 +786,16 @@ export default function App() {
 
       <div className="layout">
         <aside className="panel">
-          <section>
+          <nav className="panel-nav" aria-label="Configuration sections">
+            <a href="#preset-editor">Preset</a>
+            <a href="#content-editor">Product</a>
+            <a href="#layout-editor">Layout</a>
+            <a href="#sizes-editor">Sizes</a>
+            <a href="#assets-editor">Assets</a>
+            <a href="#legal-editor">Legal</a>
+          </nav>
+
+          <section id="preset-editor" className="form-section">
             <h2>Preset</h2>
             <div className="field">
               <label>Preset</label>
@@ -787,7 +831,7 @@ export default function App() {
             </div>
           </section>
 
-          <section>
+          <section id="content-editor" className="form-section">
             <h2>Content</h2>
 
             <div className="field">
@@ -844,6 +888,35 @@ export default function App() {
                   aria-label="Brand color hex"
                 />
               </div>
+              <div className="cmyk-channel-grid" aria-label="Brand CMYK recipe">
+                {(['c', 'm', 'y', 'k'] as const).map((channel) => (
+                  <label key={channel}>
+                    <span>{channel.toUpperCase()}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={Math.round(doc.brandColorCmyk[channel] * 100)}
+                      onChange={(e) =>
+                        setDoc(
+                          applyBrandCmyk(
+                            doc,
+                            channel,
+                            Number(e.target.value || 0),
+                          ),
+                        )
+                      }
+                      aria-label={`Brand CMYK ${channel.toUpperCase()}`}
+                    />
+                    <span>%</span>
+                  </label>
+                ))}
+              </div>
+              <p className="hint">
+                HEX controls the screen colour; CMYK is the print recipe used by the PDF
+                and its simulation.
+              </p>
               <label className="check-inline brand-text-check">
                 <input
                   type="checkbox"
@@ -860,13 +933,23 @@ export default function App() {
             </div>
 
             {doc.boxProductMode === 'dual' ? (
-              <div className="dual-content-grid">
-                {[0, 1].map((index) => {
-                  const slot =
-                    doc.boxProducts[index] ??
-                    emptyBoxProductSlot(`PRODUCT ${index + 1}`, '')
-                  return (
-                    <div key={index} className="product-slot-fields">
+              <>
+                <RichTextEditor
+                  label="Shared model title"
+                  value={doc.title}
+                  onChange={(title) => setDoc({ ...doc, title })}
+                />
+                <p className="hint">
+                  Shown below the brand wordmark; each product keeps its own title
+                  below.
+                </p>
+                <div className="dual-content-grid">
+                  {[0, 1].map((index) => {
+                    const slot =
+                      doc.boxProducts[index] ??
+                      emptyBoxProductSlot(`PRODUCT ${index + 1}`, '')
+                    return (
+                      <div key={index} className="product-slot-fields">
                       <h3>Product {index + 1}</h3>
                       <div className="field">
                         <label>Article / SKU {index + 1}</label>
@@ -909,10 +992,11 @@ export default function App() {
                           <p className="hint">Current: {slot.imageName}</p>
                         )}
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
             ) : (
               <>
                 <div className="field">
@@ -955,7 +1039,7 @@ export default function App() {
             )}
 
             <div className="field">
-              <label>Title size per output</label>
+              <label>Typography & sheet</label>
               <div className="title-sizes">
                 <label>
                   Size normal (mm)
@@ -1037,19 +1121,71 @@ export default function App() {
                     }
                   />
                 </label>
+                <label>
+                  Normal columns
+                  <input
+                    type="number"
+                    min={1}
+                    max={6}
+                    step={1}
+                    value={doc.sizeLabelSheet.normalColumns}
+                    onChange={(e) =>
+                      setDoc({
+                        ...doc,
+                        sizeLabelSheet: {
+                          ...doc.sizeLabelSheet,
+                          normalColumns: Math.min(
+                            6,
+                            Math.max(
+                              1,
+                              Math.round(Number(e.target.value) || 4),
+                            ),
+                          ),
+                        },
+                      })
+                    }
+                  />
+                </label>
+                <label>
+                  Double columns
+                  <input
+                    type="number"
+                    min={1}
+                    max={4}
+                    step={1}
+                    value={doc.sizeLabelSheet.doubleColumns}
+                    onChange={(e) =>
+                      setDoc({
+                        ...doc,
+                        sizeLabelSheet: {
+                          ...doc.sizeLabelSheet,
+                          doubleColumns: Math.min(
+                            4,
+                            Math.max(
+                              1,
+                              Math.round(Number(e.target.value) || 2),
+                            ),
+                          ),
+                        },
+                      })
+                    }
+                  />
+                </label>
               </div>
             </div>
           </section>
 
-          <BoxCompositionControls
-            doc={doc}
-            onChange={setDoc}
-            tableWarning={scenes?.box?.tableWarning}
-            overflow={scenes?.box?.overflow}
-            layoutStrategy={scenes?.box?.layoutStrategy}
-          />
+          <div id="layout-editor" className="section-anchor">
+            <BoxCompositionControls
+              doc={doc}
+              onChange={setDoc}
+              tableWarning={scenes?.box?.tableWarning}
+              overflow={scenes?.box?.overflow}
+              layoutStrategy={scenes?.box?.layoutStrategy}
+            />
+          </div>
 
-          <section>
+          <section id="sizes-editor" className="form-section">
             <h2>Sizes</h2>
             <SizeTableEditor
               value={workingTable}
@@ -1065,7 +1201,7 @@ export default function App() {
             />
           </section>
 
-          <section>
+          <section id="assets-editor" className="form-section">
             <h2>Logos & materials</h2>
             <div className="logo-stack">
               <LogoPicker
@@ -1167,7 +1303,7 @@ export default function App() {
             </div>
           </section>
 
-          <section className="legal-section">
+          <section id="legal-editor" className="form-section legal-section">
             <h2>Legal</h2>
             <div className="field">
               <label>Show on box</label>
@@ -1242,6 +1378,13 @@ export default function App() {
         </aside>
 
         <main className="preview">
+          <div className="preview-heading">
+            <div>
+              <span className="eyebrow">Live preview</span>
+              <strong>{currentPresetName}</strong>
+            </div>
+            <span className="preview-format">{activeOutputLabel}</span>
+          </div>
           <div className="tabs">
             {(
               [
@@ -1270,6 +1413,19 @@ export default function App() {
                 Red guides
               </label>
             )}
+            {tab === 'box' && (
+              <label
+                className="guide-toggle cmyk-toggle"
+                title="Aproximación matemática de los canales configurados. No es una prueba de color ICC ni predice con precisión la impresión."
+              >
+                <input
+                  type="checkbox"
+                  checked={simulateCmyk}
+                  onChange={(e) => setSimulateCmyk(e.target.checked)}
+                />
+                CMYK aprox.
+              </label>
+            )}
           </div>
           {tab === 'box' &&
             (scenes?.box?.tableWarning ||
@@ -1287,7 +1443,19 @@ export default function App() {
             )}
           <div className="preview-stage">
             {activeScene ? (
-              <SceneSvg scene={activeScene} className="scene" />
+              <SceneSvg
+                scene={activeScene}
+                className="scene"
+                colorTransform={
+                  simulateCmyk && tab === 'box'
+                    ? (color) =>
+                        color.replace('#', '').toLowerCase() ===
+                        doc.brandColorHex.replace('#', '').toLowerCase()
+                          ? cmykToHex(doc.brandColorCmyk)
+                          : color
+                    : undefined
+                }
+              />
             ) : (
               <p className="muted">Select a size chart to preview.</p>
             )}

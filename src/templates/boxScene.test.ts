@@ -85,7 +85,7 @@ function tableFor(
 }
 
 describe('box sheet geometry', () => {
-  it('matches boxSheetMm for 140120 and 120100', () => {
+  it('matches boxSheetMm for 140Â120 and 120Â100', () => {
     const s140 = boxSheetMm({ width: 140, height: 120 })
     const s120 = boxSheetMm({ width: 120, height: 100 })
 
@@ -164,12 +164,22 @@ describe('layoutStrategy', () => {
     })
     expect(decision.split).toBe(true)
 
-    const scene = buildResponsiveBoxLabelScene(doc, table, [], null)
+    const scene = buildResponsiveBoxLabelScene(doc, table, [], 'product.tif', {
+      wordmarkHref: 'wordmark.svg',
+    })
     expect(scene.layoutStrategy).toBe('single-split-table')
+    const images = scene.nodes.filter((node) => node.type === 'image')
+    expect(images.find((node) => node.href === 'wordmark.svg')).toMatchObject({
+      alignX: 'left',
+    })
+    expect(images.find((node) => node.href === 'product.tif')).toMatchObject({
+      alignX: 'center',
+      alignY: 'bottom',
+    })
   })
 
   it('uses dual-* strategies for dual product mode', () => {
-    const adultTable = tableFor('dual-adult', 'dual', dualRows(4))
+    const adultTable = tableFor('dual-adult', 'dual', dualRows(8))
     const adultDoc = documentFromPreset(
       basePreset({
         id: 'dual-adult',
@@ -184,7 +194,7 @@ describe('layoutStrategy', () => {
     const adultScene = buildResponsiveBoxLabelScene(adultDoc, adultTable, [], null)
     expect(adultScene.layoutStrategy).toBe('dual-wide-table')
 
-    const kidsTable = tableFor('dual-kids', 'dual', dualRows(3, true))
+    const kidsTable = tableFor('dual-kids', 'dual', dualRows(5, true))
     const kidsDoc = documentFromPreset(
       basePreset({
         id: 'dual-kids',
@@ -194,8 +204,6 @@ describe('layoutStrategy', () => {
         boxDimensionsMm: { width: 120, height: 100 },
         enabledSizeSystems: [
           'MONDO',
-          'US M',
-          'US W',
           'US Kids',
           'UK',
           'EU',
@@ -207,6 +215,34 @@ describe('layoutStrategy', () => {
     )
     const kidsScene = buildResponsiveBoxLabelScene(kidsDoc, kidsTable, [], null)
     expect(kidsScene.layoutStrategy).toBe('dual-compact-junior')
+  })
+
+  it('switches a dual adult model to side-by-side when its size run becomes short', () => {
+    const longTable = tableFor('dual-adaptive', 'single', singleRows(13))
+    const doc = documentFromPreset(
+      basePreset({
+        id: 'dual-adaptive',
+        name: 'Dual Adaptive',
+        mode: 'dual',
+        boxProductMode: 'dual',
+        boxDimensionsMm: { width: 120, height: 100 },
+        enabledSizeSystems: [...DEFAULT_SIZE_SYSTEMS],
+        boxLayout: { template: 'auto' },
+        sizeTable: longTable,
+      }),
+      migrateDocument({}).legal,
+    )
+
+    expect(buildResponsiveBoxLabelScene(doc, longTable, [], null).layoutStrategy)
+      .toBe('dual-wide-table')
+
+    const fiveRows = { ...longTable, rows: longTable.rows.slice(0, 5) }
+    expect(buildResponsiveBoxLabelScene(doc, fiveRows, [], null).layoutStrategy)
+      .toBe('dual-wide-table')
+
+    const shortTable = { ...longTable, rows: longTable.rows.slice(0, 4) }
+    expect(buildResponsiveBoxLabelScene(doc, shortTable, [], null).layoutStrategy)
+      .toBe('dual-side-by-side-junior')
   })
 })
 
@@ -302,6 +338,93 @@ describe('US Kids and legal visibility', () => {
   })
 })
 
+describe('dynamic footer rules', () => {
+  it('places dual-product sublogos above a populated regulatory block', () => {
+    const table = tableFor('footer-legal', 'dual', dualRows(3, true))
+    const doc = documentFromPreset(
+      basePreset({
+        id: 'footer-legal',
+        name: 'Footer Legal',
+        mode: 'dual',
+        boxProductMode: 'dual',
+        boxDimensionsMm: { width: 120, height: 100 },
+        enabledSizeSystems: ['MONDO', 'US Kids', 'UK', 'EU'],
+        boxLayout: { logoPlacement: 'auto' },
+        sizeTable: table,
+      }),
+      migrateDocument({}).legal,
+    )
+    const scene = buildResponsiveBoxLabelScene(
+      doc,
+      table,
+      [{ href: 'sublogo.svg', aspectRatio: 1 }],
+      null,
+      { classLogoHref: 'class.svg' },
+    )
+    const sublogo = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'image' }> =>
+        node.type === 'image' && node.href === 'sublogo.svg',
+    )
+    const standard = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'text' }> =>
+        node.type === 'text' &&
+        node.runs.some((run) => run.text === doc.legal.standard),
+    )
+    expect(sublogo).toBeDefined()
+    expect(standard).toBeDefined()
+    expect((sublogo?.y ?? 0) + (sublogo?.h ?? 0)).toBeLessThan(
+      standard?.y ?? 0,
+    )
+  })
+
+  it('uses a horizontal made-in line when the dual footer is otherwise free', () => {
+    const table = tableFor('footer-free', 'single', singleRows(6))
+    const doc = documentFromPreset(
+      basePreset({
+        id: 'footer-free',
+        name: 'Footer Free',
+        mode: 'dual',
+        boxProductMode: 'dual',
+        boxDimensionsMm: { width: 120, height: 100 },
+        boxLayout: { logoPlacement: 'auto' },
+        legalDisplay: {
+          showCompany: false,
+          showPostalAddress: false,
+          showPhoneFax: false,
+          showWebEmail: false,
+          showStandard: false,
+          showClass: false,
+          showWeight: false,
+          showMadeIn: true,
+        },
+        sizeTable: table,
+      }),
+      migrateDocument({}).legal,
+    )
+    const scene = buildResponsiveBoxLabelScene(
+      doc,
+      table,
+      [{ href: 'sublogo.svg', aspectRatio: 1 }],
+      null,
+      { classLogoHref: 'class.svg' },
+    )
+    const classIcon = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'image' }> =>
+        node.type === 'image' && node.href === 'class.svg',
+    )
+    const madeIn = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'text' }> =>
+        node.type === 'text' &&
+        node.runs.some((run) => run.text === doc.legal.madeIn.toUpperCase()),
+    )
+    expect(classIcon).toBeDefined()
+    expect(madeIn?.anchor).toBeUndefined()
+    expect(madeIn?.x ?? 0).toBeGreaterThan(
+      (classIcon?.x ?? 0) + (classIcon?.w ?? 0),
+    )
+  })
+})
+
 describe('dual model title', () => {
   it('keeps defaultTitle as doc.title for dual presets (Triple X header)', () => {
     const table = tableFor('triple', 'dual', dualRows(2, true))
@@ -313,6 +436,10 @@ describe('dual model title', () => {
         boxProductMode: 'dual',
         defaultTitle: [{ text: 'TRIPLE X EVO ADJUSTABLE', bold: true }],
         boxDimensionsMm: { width: 125, height: 110 },
+        boxLayout: {
+          template: 'dual-side-by-side-junior',
+          logoPlacement: 'footer',
+        },
         enabledSizeSystems: ['MONDO', 'US Kids', 'UK', 'EU'],
         boxProducts: [
           {
@@ -338,7 +465,7 @@ describe('dual model title', () => {
     const scene = buildResponsiveBoxLabelScene(doc, table, [], null, {
       wordmarkHref: 'wm.svg',
     })
-    expect(scene.layoutStrategy).toBe('dual-compact-junior')
+    expect(scene.layoutStrategy).toBe('dual-side-by-side-junior')
     const text = sceneText(scene.nodes).replace(/\n/g, ' ')
     expect(text).toContain('ADJUSTABLE')
     expect(text).toContain('TRIPLE X EVO Dark Grey')

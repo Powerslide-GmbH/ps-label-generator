@@ -1,17 +1,30 @@
 import {
   PDFDocument,
+  appendBezierCurve,
+  closePath,
   cmyk,
   degrees,
+  drawImage as drawImageOperators,
+  fill,
+  fillAndStroke,
+  lineTo,
+  moveTo,
+  setFillingColor,
+  setLineWidth,
+  setStrokingColor,
+  stroke,
   type PDFFont,
+  type PDFOperator,
   type PDFPage,
   type RGB,
   type CMYK,
 } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
-import type { LabelDocument, PdfFontMode, BoxTextColorMode } from '@/domain/types'
+import type { LabelDocument, PdfFontMode, BoxTextColorMode, Cmyk } from '@/domain/types'
 import type { LabelScene, SceneNode } from '@/templates/scenes'
 import { MM_TO_PT, PURE_BLACK, BOX_SHEET_MM } from '@/domain/types'
 import { urlToCanvas } from './imageDecode'
+import { imageDataToCmykBytes, type BrandCmykMapping } from './cmyk'
 
 /** fontkit glyph path (runtime has scale/translate beyond the published d.ts). */
 type FkPath = {
@@ -61,6 +74,7 @@ export function toPdfColor(
   hexOrBlack: string,
   mode: PdfColorMode,
   textColorMode: BoxTextColorMode = 'brand',
+  brand?: BrandCmykMapping,
 ): RGB | CMYK {
   const h = hexOrBlack.replace('#', '')
   const full =
@@ -88,9 +102,54 @@ export function toPdfColor(
     return cmyk(0, 0, 0, Math.max(0, Math.min(1, 1 - luminance)))
   }
 
+  if (
+    brand &&
+    hexOrBlack.replace('#', '').toLowerCase() ===
+      brand.hex.replace('#', '').toLowerCase()
+  ) {
+    return cmyk(brand.cmyk.c, brand.cmyk.m, brand.cmyk.y, brand.cmyk.k)
+  }
+
   const k = 1 - Math.max(r, g, b)
   if (k > 0.99) return cmyk(PURE_BLACK.c, PURE_BLACK.m, PURE_BLACK.y, PURE_BLACK.k)
   return cmyk((1 - r - k) / (1 - k), (1 - g - k) / (1 - k), (1 - b - k) / (1 - k), k)
+}
+
+/** Native PDF rounded rectangle path, including fill/stroke operators. */
+export function roundedRectOperators(args: {
+  x: number
+  y: number
+  width: number
+  height: number
+  radius: number
+  color?: RGB | CMYK
+  borderColor?: RGB | CMYK
+  borderWidth?: number
+}): PDFOperator[] {
+  const { x, y, width, height, color, borderColor } = args
+  const radius = Math.max(0, Math.min(args.radius, width / 2, height / 2))
+  const kr = radius * 0.5522847498307936
+  const operators: PDFOperator[] = []
+  if (color) operators.push(setFillingColor(color))
+  if (borderColor) {
+    operators.push(setStrokingColor(borderColor), setLineWidth(args.borderWidth ?? 0))
+  }
+  operators.push(
+    moveTo(x + radius, y),
+    lineTo(x + width - radius, y),
+    appendBezierCurve(x + width - radius + kr, y, x + width, y + radius - kr, x + width, y + radius),
+    lineTo(x + width, y + height - radius),
+    appendBezierCurve(x + width, y + height - radius + kr, x + width - radius + kr, y + height, x + width - radius, y + height),
+    lineTo(x + radius, y + height),
+    appendBezierCurve(x + radius - kr, y + height, x, y + height - radius + kr, x, y + height - radius),
+    lineTo(x, y + radius),
+    appendBezierCurve(x, y + radius - kr, x + radius - kr, y, x + radius, y),
+    closePath(),
+  )
+  if (color && borderColor) operators.push(fillAndStroke())
+  else if (color) operators.push(fill())
+  else if (borderColor) operators.push(stroke())
+  return operators
 }
 
 function unitScale(scene: LabelScene): number {
@@ -189,6 +248,7 @@ function drawNodes(
     { width: number; height: number; draw: (x: number, y: number, w: number, h: number) => void }
   >,
   pageH: number,
+  brand?: BrandCmykMapping,
 ) {
   const Y = (y: number, h = 0) => pageH - (y + h) * scale
 
@@ -196,27 +256,42 @@ function drawNodes(
     if (node.type === 'rect') {
       const color =
         node.fill && node.fill !== 'none'
-          ? toPdfColor(node.fill, mode, textColorMode)
+          ? toPdfColor(node.fill, mode, textColorMode, brand)
           : undefined
       const stroke =
         node.stroke && node.stroke !== 'none'
-          ? toPdfColor(node.stroke, mode, textColorMode)
+          ? toPdfColor(node.stroke, mode, textColorMode, brand)
           : undefined
-      page.drawRectangle({
-        x: node.x * scale,
-        y: Y(node.y, node.h),
-        width: node.w * scale,
-        height: node.h * scale,
-        color: color as CMYK | RGB | undefined,
-        borderColor: stroke as CMYK | RGB | undefined,
-        borderWidth: (node.strokeWidth ?? 0) * scale,
-      })
+      if ((node.radius ?? 0) > 0) {
+        page.pushOperators(
+          ...roundedRectOperators({
+            x: node.x * scale,
+            y: Y(node.y, node.h),
+            width: node.w * scale,
+            height: node.h * scale,
+            radius: (node.radius ?? 0) * scale,
+            color: color as CMYK | RGB | undefined,
+            borderColor: stroke as CMYK | RGB | undefined,
+            borderWidth: (node.strokeWidth ?? 0) * scale,
+          }),
+        )
+      } else {
+        page.drawRectangle({
+          x: node.x * scale,
+          y: Y(node.y, node.h),
+          width: node.w * scale,
+          height: node.h * scale,
+          color: color as CMYK | RGB | undefined,
+          borderColor: stroke as CMYK | RGB | undefined,
+          borderWidth: (node.strokeWidth ?? 0) * scale,
+        })
+      }
     } else if (node.type === 'line') {
       page.drawLine({
         start: { x: node.x1 * scale, y: Y(node.y1) },
         end: { x: node.x2 * scale, y: Y(node.y2) },
         thickness: (node.strokeWidth ?? 0.5) * scale,
-        color: toPdfColor(node.stroke, mode, textColorMode) as CMYK | RGB,
+        color: toPdfColor(node.stroke, mode, textColorMode, brand) as CMYK | RGB,
         dashArray: node.dash
           ? node.dash.split(/\s+/).map((n) => parseFloat(n) * scale)
           : undefined,
@@ -242,7 +317,7 @@ function drawNodes(
       for (const run of node.runs) {
         const fk = run.bold ? fonts.fkBold : fonts.fkRegular
         const size = (run.fontSize ?? 10) * scale
-        const color = toPdfColor(node.fill, mode, textColorMode) as CMYK | RGB
+        const color = toPdfColor(node.fill, mode, textColorMode, brand) as CMYK | RGB
         if (fonts.pdfFontMode === 'editable' && fonts.pdfRegular && fonts.pdfBold) {
           const pdfFont = run.bold ? fonts.pdfBold : fonts.pdfRegular
           page.drawText(run.text, {
@@ -270,7 +345,20 @@ function drawNodes(
       const boxRatio = boxW / boxH
       const drawW = imageRatio > boxRatio ? boxW : boxH * imageRatio
       const drawH = imageRatio > boxRatio ? boxW / imageRatio : boxH
-      img.draw(boxX + (boxW - drawW) / 2, boxY + (boxH - drawH) / 2, drawW, drawH)
+      const drawX =
+        node.alignX === 'left'
+          ? boxX
+          : node.alignX === 'right'
+            ? boxX + boxW - drawW
+            : boxX + (boxW - drawW) / 2
+      // PDF coordinates grow upwards: the box's Y is its lower edge.
+      const drawY =
+        node.alignY === 'bottom'
+          ? boxY
+          : node.alignY === 'top'
+            ? boxY + boxH - drawH
+            : boxY + (boxH - drawH) / 2
+      img.draw(drawX, drawY, drawW, drawH)
     }
   }
 }
@@ -299,6 +387,86 @@ function isPdfHref(href: string): boolean {
   return clean.endsWith('.pdf')
 }
 
+export function registerCmykImageXObject(
+  pdf: PDFDocument,
+  page: PDFPage,
+  width: number,
+  height: number,
+  cmykBytes: Uint8Array,
+  alpha?: Uint8Array,
+) {
+  const context = pdf.context
+  const softMaskRef = alpha
+    ? context.register(
+        context.flateStream(alpha, {
+          Type: 'XObject',
+          Subtype: 'Image',
+          Width: width,
+          Height: height,
+          BitsPerComponent: 8,
+          ColorSpace: 'DeviceGray',
+        }),
+      )
+    : undefined
+  const imageRef = context.register(
+    context.flateStream(cmykBytes, {
+      Type: 'XObject',
+      Subtype: 'Image',
+      Width: width,
+      Height: height,
+      BitsPerComponent: 8,
+      ColorSpace: 'DeviceCMYK',
+      SMask: softMaskRef,
+    }),
+  )
+  const resourceName = page.node.newXObject('CMYKImage', imageRef)
+
+  return {
+    width,
+    height,
+    draw: (x: number, y: number, drawWidth: number, drawHeight: number) => {
+      page.pushOperators(
+        ...drawImageOperators(resourceName, {
+          x,
+          y,
+          width: drawWidth,
+          height: drawHeight,
+          rotate: degrees(0),
+          xSkew: degrees(0),
+          ySkew: degrees(0),
+        }),
+      )
+    },
+  }
+}
+
+function registerCmykCanvasImage(
+  pdf: PDFDocument,
+  page: PDFPage,
+  canvas: HTMLCanvasElement,
+  mode: PdfColorMode,
+  brand?: BrandCmykMapping,
+) {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) throw new Error('Could not read image pixels for CMYK export')
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const cmykBytes = imageDataToCmykBytes(imageData, mode === 'k-only', brand)
+  const alpha = new Uint8Array(canvas.width * canvas.height)
+  let hasTransparency = false
+  for (let src = 3, dst = 0; src < imageData.data.length; src += 4, dst++) {
+    alpha[dst] = imageData.data[src]
+    if (alpha[dst] !== 255) hasTransparency = true
+  }
+  return registerCmykImageXObject(
+    pdf,
+    page,
+    canvas.width,
+    canvas.height,
+    cmykBytes,
+    hasTransparency ? alpha : undefined,
+  )
+}
+
 export async function sceneToPdfBytes(
   scene: LabelScene,
   opts: {
@@ -306,11 +474,17 @@ export async function sceneToPdfBytes(
     baseUrl?: string
     pdfFontMode?: PdfFontMode
     textColorMode?: BoxTextColorMode
+    brandColorHex?: string
+    brandColorCmyk?: Cmyk
   },
 ): Promise<Uint8Array> {
   const base = opts.baseUrl ?? './'
   const pdfFontMode: PdfFontMode = opts.pdfFontMode ?? 'outlined'
   const textColorMode: BoxTextColorMode = opts.textColorMode ?? 'brand'
+  const brand =
+    opts.brandColorHex && opts.brandColorCmyk
+      ? { hex: opts.brandColorHex, cmyk: opts.brandColorCmyk }
+      : undefined
   const pdf = await PDFDocument.create()
 
   const { regular, bold } = await loadGilroyBytes(base)
@@ -375,15 +549,9 @@ export async function sceneToPdfBytes(
           draw: (x, y, w, h) => page.drawPage(embedded, { x, y, width: w, height: h }),
         })
       } else {
-        // PNG/JPG/SVG via canvas rasterization — CMYK is not guaranteed for these embeds.
+        // Raster and SVG artwork is normalized to DeviceCMYK before embedding.
         const canvas = await urlToCanvas(node.href)
-        const png = await canvasToPng(canvas)
-        const embedded = await pdf.embedPng(png)
-        images.set(node.href, {
-          width: embedded.width,
-          height: embedded.height,
-          draw: (x, y, w, h) => page.drawImage(embedded, { x, y, width: w, height: h }),
-        })
+        images.set(node.href, registerCmykCanvasImage(pdf, page, canvas, opts.mode, brand))
       }
     } catch {
       // skip missing images
@@ -401,25 +569,13 @@ export async function sceneToPdfBytes(
     })
   }
 
-  drawNodes(page, nodes, scale, fonts, opts.mode, textColorMode, images, pageH)
+  drawNodes(page, nodes, scale, fonts, opts.mode, textColorMode, images, pageH, brand)
   return pdf.save()
-}
-
-function canvasToPng(canvas: HTMLCanvasElement): Promise<ArrayBuffer> {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      async (blob) => {
-        if (!blob) return reject(new Error('toBlob failed'))
-        resolve(await blob.arrayBuffer())
-      },
-      'image/png',
-    )
-  })
 }
 
 export async function exportSizeChartImage(
   scene: LabelScene,
-  format: 'image/jpeg' | 'image/png' = 'image/jpeg',
+  format: 'image/webp' | 'image/png' = 'image/webp',
 ): Promise<Blob> {
   const canvas = document.createElement('canvas')
   canvas.width = scene.width
@@ -534,7 +690,7 @@ export async function buildExports(args: {
   const items: ExportBundleItem[] = []
   for (const entry of args.scenes) {
     if (entry.scene.kind === 'sizechart') {
-      const blob = await exportSizeChartImage(entry.scene, 'image/jpeg')
+      const blob = await exportSizeChartImage(entry.scene, 'image/webp')
       items.push({ filename: entry.filename, bytes: blob })
     } else {
       const bytes = await sceneToPdfBytes(entry.scene, {
@@ -544,6 +700,8 @@ export async function buildExports(args: {
         textColorMode:
           entry.textColorMode ??
           (entry.scene.kind === 'box' ? args.doc.boxTextColorMode : 'pure-k'),
+        brandColorHex: args.doc.brandColorHex,
+        brandColorCmyk: args.doc.brandColorCmyk,
       })
       items.push({ filename: entry.filename, bytes })
     }

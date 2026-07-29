@@ -14,8 +14,12 @@
   "mode": "dual",
   "defaultTitle": [
     {
-      "text": "NEXT OUTBACK 150 PDS",
+      "text": "NEXT OUTBACK ",
       "bold": true
+    },
+    {
+      "text": "150 PDS",
+      "bold": false
     }
   ],
   "defaultSku": "908489",
@@ -40,7 +44,16 @@
     "boxLabel": true,
     "sizeChart": true
   },
-  "defaultProductImageId": "908464-42265_PS_Next_Edge_150_2025_view01.tif",
+  "defaultProductImageId": "908489_next_outback_150_pds.jpg",
+  "boxLayout": {
+    "template": "auto",
+    "logoPlacement": "auto",
+    "wordmarkAlign": "auto",
+    "wordmarkScale": 0.9,
+    "productImageScale": 1,
+    "titleColumnPercent": 58,
+    "brandGapMm": 1
+  },
   "sizeTable": {
     "id": "ps-urban-next",
     "name": "PS-Urban-NEXT",

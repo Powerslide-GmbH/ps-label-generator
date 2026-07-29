@@ -24,6 +24,18 @@ describe('packing', () => {
     expect(result.page.w).toBeGreaterThanOrEqual(297)
     expect(result.page.h).toBeGreaterThanOrEqual(210)
   })
+
+  it('honors a production-sheet column cap', () => {
+    const result = packLabels(11, 45, 30, {
+      gap: 2,
+      marginTop: 22,
+      maxColumns: 4,
+    })
+    expect(result.slots.slice(0, 4).map((slot) => slot.y)).toEqual([
+      22, 22, 22, 22,
+    ])
+    expect(result.slots[4].y).toBeGreaterThan(22)
+  })
 })
 
 describe('rich text', () => {
@@ -145,6 +157,14 @@ describe('preset json', () => {
           boxLabel: true,
           sizeChart: true,
         },
+        boxLayout: {
+          template: 'single-standard',
+          logoPlacement: 'brand',
+          wordmarkScale: 0.85,
+          productImageScale: 1.1,
+          titleColumnPercent: 58,
+          brandGapMm: 1,
+        },
       },
       'zoom.json',
       warnings,
@@ -157,6 +177,9 @@ describe('preset json', () => {
     expect(doc.badgeLogoId).toBe('PS_small_CMYK')
     expect(doc.brandWordmarkLogoId).toBe('powerslide_logo_blue')
     expect(doc.outputs.sizeLabelDouble).toBe(true)
+    expect(doc.boxLayout.template).toBe('single-standard')
+    expect(doc.boxLayout.logoPlacement).toBe('brand')
+    expect(doc.boxLayout.wordmarkScale).toBe(0.85)
     expect(plainText(doc.title)).toBe('ZOOM TORELLI PRO 80')
   })
 
@@ -238,8 +261,10 @@ describe('box config migration & class helpers', () => {
     const { migrateDocument } = await import('@/domain/boxConfig')
     const {
       DEFAULT_BOX_DIMENSIONS_MM,
+      DEFAULT_BOX_LAYOUT,
       DEFAULT_BOX_TABLE_FLOW,
       DEFAULT_LEGAL_DISPLAY,
+      DEFAULT_SIZE_LABEL_SHEET,
       DEFAULT_SIZE_SYSTEMS,
     } = await import('@/domain/types')
     const doc = migrateDocument({
@@ -252,6 +277,8 @@ describe('box config migration & class helpers', () => {
     expect(doc.boxDimensionsMm).toEqual(DEFAULT_BOX_DIMENSIONS_MM)
     expect(doc.enabledSizeSystems).toEqual(DEFAULT_SIZE_SYSTEMS)
     expect(doc.boxTableFlow).toEqual(DEFAULT_BOX_TABLE_FLOW)
+    expect(doc.boxLayout).toEqual(DEFAULT_BOX_LAYOUT)
+    expect(doc.sizeLabelSheet).toEqual(DEFAULT_SIZE_LABEL_SHEET)
     expect(doc.legalDisplay).toEqual(DEFAULT_LEGAL_DISPLAY)
     expect(doc.pdfFontMode).toBe('outlined')
     expect(doc.boxTextColorMode).toBe('pure-k')

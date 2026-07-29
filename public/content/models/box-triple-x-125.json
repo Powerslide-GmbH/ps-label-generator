@@ -14,8 +14,12 @@
   "mode": "dual",
   "defaultTitle": [
     {
-      "text": "TRIPLE X EVO ADJUSTABLE",
+      "text": "TRIPLE X EVO ",
       "bold": true
+    },
+    {
+      "text": "ADJUSTABLE",
+      "bold": false
     }
   ],
   "defaultSku": "904719",
@@ -39,32 +43,40 @@
     "boxLabel": true,
     "sizeChart": false
   },
-  "defaultProductImageId": "908474_PS_Storm_80_Mango_2026_view01.tif",
+  "defaultProductImageId": "904719_triple_x_dark_grey.tif",
   "boxProductMode": "dual",
   "boxProducts": [
     {
       "title": [
         {
-          "text": "TRIPLE X EVO Dark Grey",
+          "text": "TRIPLE X EVO ",
           "bold": true
+        },
+        {
+          "text": "Dark Grey",
+          "bold": false
         }
       ],
       "subtitle": "adj.",
       "sku": "904719",
-      "imageName": "908474_PS_Storm_80_Mango_2026_view01.tif",
-      "imagePath": "content/products/908474_PS_Storm_80_Mango_2026_view01.tif"
+      "imageName": "904719_triple_x_dark_grey.tif",
+      "imagePath": "content/products/904719_triple_x_dark_grey.tif"
     },
     {
       "title": [
         {
-          "text": "TRIPLE X EVO Hot Pink",
+          "text": "TRIPLE X EVO ",
           "bold": true
+        },
+        {
+          "text": "Hot Pink",
+          "bold": false
         }
       ],
       "subtitle": "adj.",
       "sku": "904720",
-      "imageName": "908482_Zoom_Pro_90_Sand_2026_view01.tif",
-      "imagePath": "content/products/908482_Zoom_Pro_90_Sand_2026_view01.tif"
+      "imageName": "904720_triple_x_hot_pink.tif",
+      "imagePath": "content/products/904720_triple_x_hot_pink.tif"
     }
   ],
   "boxDimensionsMm": {
@@ -79,6 +91,15 @@
   ],
   "boxTableFlow": {
     "mode": "auto"
+  },
+  "boxLayout": {
+    "template": "auto",
+    "logoPlacement": "auto",
+    "wordmarkAlign": "auto",
+    "wordmarkScale": 0.86,
+    "productImageScale": 1.08,
+    "titleColumnPercent": 50,
+    "brandGapMm": 0
   },
   "legalDisplay": {
     "showCompany": true,

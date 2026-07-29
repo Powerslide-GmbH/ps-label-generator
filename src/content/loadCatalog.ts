@@ -177,6 +177,9 @@ export function parseModelJson(
     titleSizes: isObject(raw.titleSizes)
       ? (raw.titleSizes as ModelPreset['titleSizes'])
       : undefined,
+    sizeLabelSheet: isObject(raw.sizeLabelSheet)
+      ? (raw.sizeLabelSheet as ModelPreset['sizeLabelSheet'])
+      : undefined,
     legalProfileId,
     outputs: {
       sizeLabelNormal: Boolean(
@@ -208,6 +211,9 @@ export function parseModelJson(
   }
   if (isObject(raw.boxTableFlow)) {
     preset.boxTableFlow = raw.boxTableFlow as ModelPreset['boxTableFlow']
+  }
+  if (isObject(raw.boxLayout)) {
+    preset.boxLayout = raw.boxLayout as ModelPreset['boxLayout']
   }
   if (isObject(raw.legalDisplay)) {
     preset.legalDisplay = raw.legalDisplay as ModelPreset['legalDisplay']

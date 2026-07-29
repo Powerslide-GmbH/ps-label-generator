@@ -36,7 +36,7 @@ const CARDS: Array<{
     key: 'sizeChart',
     title: 'Size chart',
     short: 'Size chart',
-    hint: 'JPG · 1200×600 · RGB',
+    hint: 'WebP · 1200×600 · RGB · web-ready',
   },
 ]
 

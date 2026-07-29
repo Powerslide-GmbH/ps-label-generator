@@ -1,6 +1,7 @@
 import { richFromPlain } from './richText'
 import type {
   BoxDimensionsMm,
+  BoxLayoutSettings,
   BoxProductMode,
   BoxProductSlot,
   BoxTableFlow,
@@ -10,14 +11,17 @@ import type {
   LogoRef,
   ModelPreset,
   SizeChartTable,
+  SizeLabelSheetSettings,
   SizeRow,
   SizeSystem,
   SizeSystemKey,
 } from './types'
 import {
   DEFAULT_BOX_DIMENSIONS_MM,
+  DEFAULT_BOX_LAYOUT,
   DEFAULT_BOX_TABLE_FLOW,
   DEFAULT_LEGAL_DISPLAY,
+  DEFAULT_SIZE_LABEL_SHEET,
   DEFAULT_SIZE_SYSTEMS,
   LEGACY_LEGAL_DISPLAY,
   MIN_BOX_DIMENSIONS_MM,
@@ -157,6 +161,79 @@ export function normalizeBoxTableFlow(
   }
 }
 
+function finiteInRange(
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.min(max, Math.max(min, value))
+    : fallback
+}
+
+export function normalizeBoxLayout(
+  raw: Partial<BoxLayoutSettings> | undefined,
+): BoxLayoutSettings {
+  const template =
+    raw?.template === 'single-standard' ||
+    raw?.template === 'single-split-table' ||
+    raw?.template === 'dual-wide-table' ||
+    raw?.template === 'dual-compact-junior' ||
+    raw?.template === 'dual-side-by-side-junior'
+      ? raw.template
+      : 'auto'
+  const logoPlacement =
+    raw?.logoPlacement === 'table' ||
+    raw?.logoPlacement === 'brand' ||
+    raw?.logoPlacement === 'footer'
+      ? raw.logoPlacement
+      : 'auto'
+  const wordmarkAlign =
+    raw?.wordmarkAlign === 'left' ||
+    raw?.wordmarkAlign === 'center' ||
+    raw?.wordmarkAlign === 'right'
+      ? raw.wordmarkAlign
+      : 'auto'
+  const optionalMargin = (value: unknown) =>
+    typeof value === 'number' && Number.isFinite(value)
+      ? Math.min(24, Math.max(2, value))
+      : undefined
+
+  return {
+    ...DEFAULT_BOX_LAYOUT,
+    template,
+    logoPlacement,
+    wordmarkAlign,
+    wordmarkScale: finiteInRange(raw?.wordmarkScale, 1, 0.5, 1.8),
+    productImageScale: finiteInRange(raw?.productImageScale, 1, 0.5, 1.5),
+    titleColumnPercent: finiteInRange(raw?.titleColumnPercent, 50, 30, 75),
+    brandGapMm: finiteInRange(raw?.brandGapMm, 0, -4, 12),
+    marginX: optionalMargin(raw?.marginX),
+    marginTop: optionalMargin(raw?.marginTop),
+    marginBottom: optionalMargin(raw?.marginBottom),
+  }
+}
+
+export function normalizeSizeLabelSheet(
+  raw: Partial<SizeLabelSheetSettings> | undefined,
+): SizeLabelSheetSettings {
+  const columnCount = (value: unknown, fallback: number) =>
+    typeof value === 'number' && Number.isFinite(value)
+      ? Math.min(8, Math.max(1, Math.round(value)))
+      : fallback
+  return {
+    normalColumns: columnCount(
+      raw?.normalColumns,
+      DEFAULT_SIZE_LABEL_SHEET.normalColumns,
+    ),
+    doubleColumns: columnCount(
+      raw?.doubleColumns,
+      DEFAULT_SIZE_LABEL_SHEET.doubleColumns,
+    ),
+  }
+}
+
 export function primaryProductFromDoc(doc: {
   title: LabelDocument['title']
   sku: string
@@ -266,6 +343,9 @@ export function migrateDocument(raw: Partial<LabelDocument> & Record<string, unk
       box: 4.8,
       sizeChart: 38,
     },
+    sizeLabelSheet: normalizeSizeLabelSheet(
+      raw.sizeLabelSheet as Partial<SizeLabelSheetSettings> | undefined,
+    ),
     sizeChartId: (raw.sizeChartId as string) ?? '',
     mode: raw.mode === 'single' ? 'single' : 'dual',
     legal: (raw.legal as LegalProfile) ?? legalProfileById('adult-class-a'),
@@ -286,6 +366,9 @@ export function migrateDocument(raw: Partial<LabelDocument> & Record<string, unk
     ),
     boxTableFlow: normalizeBoxTableFlow(
       raw.boxTableFlow as BoxTableFlow | undefined,
+    ),
+    boxLayout: normalizeBoxLayout(
+      raw.boxLayout as Partial<BoxLayoutSettings> | undefined,
     ),
     legalDisplay: normalizeLegalDisplay(
       raw.legalDisplay as Partial<LegalDisplayOptions> | undefined,
@@ -328,6 +411,8 @@ export function migratePreset(preset: ModelPreset): ModelPreset {
       preset.sizeTable?.rows,
     ),
     boxTableFlow: normalizeBoxTableFlow(preset.boxTableFlow),
+    boxLayout: normalizeBoxLayout(preset.boxLayout),
+    sizeLabelSheet: normalizeSizeLabelSheet(preset.sizeLabelSheet),
     legalDisplay: normalizeLegalDisplay(preset.legalDisplay, legacy),
     pdfFontMode: preset.pdfFontMode ?? 'outlined',
     boxTextColorMode: preset.boxTextColorMode ?? 'pure-k',

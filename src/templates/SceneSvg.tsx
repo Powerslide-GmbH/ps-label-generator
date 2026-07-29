@@ -5,7 +5,7 @@ function fontFamily(bold?: boolean) {
   return bold ? 'GilroyBold, Gilroy, sans-serif' : 'Gilroy, sans-serif'
 }
 
-function renderNode(node: SceneNode, i: number) {
+function renderNode(node: SceneNode, i: number, transformColor: (color: string) => string) {
   switch (node.type) {
     case 'rect':
       return (
@@ -15,8 +15,8 @@ function renderNode(node: SceneNode, i: number) {
           y={node.y}
           width={node.w}
           height={node.h}
-          fill={node.fill ?? 'none'}
-          stroke={node.stroke ?? 'none'}
+          fill={node.fill ? transformColor(node.fill) : 'none'}
+          stroke={node.stroke ? transformColor(node.stroke) : 'none'}
           strokeWidth={node.strokeWidth ?? 0}
           rx={node.radius ?? 0}
           ry={node.radius ?? 0}
@@ -30,12 +30,17 @@ function renderNode(node: SceneNode, i: number) {
           y1={node.y1}
           x2={node.x2}
           y2={node.y2}
-          stroke={node.stroke}
+          stroke={transformColor(node.stroke)}
           strokeWidth={node.strokeWidth ?? 1}
           strokeDasharray={node.dash}
         />
       )
     case 'image':
+      {
+        const xAlign =
+          node.alignX === 'left' ? 'xMin' : node.alignX === 'right' ? 'xMax' : 'xMid'
+        const yAlign =
+          node.alignY === 'top' ? 'YMin' : node.alignY === 'bottom' ? 'YMax' : 'YMid'
       return (
         <image
           key={i}
@@ -45,10 +50,11 @@ function renderNode(node: SceneNode, i: number) {
           width={node.w}
           height={node.h}
           preserveAspectRatio={
-            node.fit === 'cover' ? 'xMidYMid slice' : 'xMidYMid meet'
+            `${xAlign}${yAlign} ${node.fit === 'cover' ? 'slice' : 'meet'}`
           }
         />
       )
+      }
     case 'text': {
       const transform = node.rotate
         ? `rotate(${node.rotate} ${node.x} ${node.y})`
@@ -65,7 +71,7 @@ function renderNode(node: SceneNode, i: number) {
           {node.runs.map((run, ri) => (
             <tspan
               key={ri}
-              fill={node.fill}
+              fill={transformColor(node.fill)}
               fontFamily={fontFamily(run.bold)}
               fontSize={run.fontSize ?? 10}
               fontWeight={run.bold ? 700 : 400}
@@ -82,11 +88,14 @@ function renderNode(node: SceneNode, i: number) {
 export function SceneSvg({
   scene,
   className,
+  colorTransform,
 }: {
   scene: LabelScene
   className?: string
+  colorTransform?: (color: string) => string
 }) {
   const vb = `0 0 ${scene.width} ${scene.height}`
+  const transformColor = colorTransform ?? ((color: string) => color)
   return (
     <svg
       className={className}
@@ -100,7 +109,7 @@ export function SceneSvg({
         maxHeight: '70vh',
       }}
     >
-      {scene.nodes.map(renderNode)}
+      {scene.nodes.map((node, index) => renderNode(node, index, transformColor))}
     </svg>
   )
 }

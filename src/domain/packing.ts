@@ -9,6 +9,8 @@ export type PackOptions = {
   marginTop?: number
   marginBottom?: number
   marginX?: number
+  /** Cap the number of labels per row to match a production sheet. */
+  maxColumns?: number
   /** When false (default), pack from the top like production sheets. */
   centerVertically?: boolean
 }
@@ -31,6 +33,9 @@ export function packLabels(
 
   const availW = minPage.w - marginX * 2
   let cols = Math.max(1, Math.floor((availW + gap) / (labelW + gap)))
+  if (opts.maxColumns != null) {
+    cols = Math.min(cols, Math.max(1, Math.floor(opts.maxColumns)))
+  }
   let rows = Math.ceil(count / cols)
   let pageW = Math.max(
     minPage.w,

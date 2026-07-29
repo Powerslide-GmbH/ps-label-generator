@@ -16,6 +16,8 @@ import {
   legalProfileById,
   migrateDocument,
   migratePreset,
+  normalizeBoxLayout,
+  normalizeSizeLabelSheet,
   syncPrimaryProductFields,
 } from './boxConfig'
 
@@ -87,6 +89,7 @@ export function documentFromPreset(
       ...normalized.materials,
     }),
     titleSizes: { ...DEFAULT_TITLE_SIZES, ...normalized.titleSizes },
+    sizeLabelSheet: normalizeSizeLabelSheet(normalized.sizeLabelSheet),
     sizeChartId: table.id || normalized.sizeChartId || '',
     mode: table.mode || normalized.mode,
     legal: structuredClone(
@@ -102,6 +105,7 @@ export function documentFromPreset(
     boxDimensionsMm: normalized.boxDimensionsMm,
     enabledSizeSystems: normalized.enabledSizeSystems,
     boxTableFlow: normalized.boxTableFlow,
+    boxLayout: normalizeBoxLayout(normalized.boxLayout),
     legalDisplay: normalized.legalDisplay,
     pdfFontMode: normalized.pdfFontMode,
     boxTextColorMode: normalized.boxTextColorMode,
@@ -165,6 +169,7 @@ export function documentToModelPreset(
     sizeChartLogos: [...synced.sizeChartLogos],
     materials: normalizeMaterials(synced.materials),
     titleSizes: { ...synced.titleSizes },
+    sizeLabelSheet: { ...synced.sizeLabelSheet },
     legalProfileId: synced.legal.id,
     outputs: { ...synced.outputs },
     defaultProductImageId: synced.productImageName ?? undefined,
@@ -173,6 +178,7 @@ export function documentToModelPreset(
     boxDimensionsMm: { ...synced.boxDimensionsMm },
     enabledSizeSystems: [...synced.enabledSizeSystems],
     boxTableFlow: { ...synced.boxTableFlow },
+    boxLayout: { ...synced.boxLayout },
     legalDisplay: { ...synced.legalDisplay },
     pdfFontMode: synced.pdfFontMode,
     boxTextColorMode: synced.boxTextColorMode,

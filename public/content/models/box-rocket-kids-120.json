@@ -39,30 +39,38 @@
     "boxLabel": true,
     "sizeChart": false
   },
-  "defaultProductImageId": "908464-42265_PS_Next_Edge_150_2025_view01.tif",
+  "defaultProductImageId": "940711_rocket_motley.jpg",
   "boxProductMode": "dual",
   "boxProducts": [
     {
       "title": [
         {
-          "text": "ROCKET MOTLEY ADJ.",
+          "text": "ROCKET MOTLEY ",
           "bold": true
+        },
+        {
+          "text": "ADJ.",
+          "bold": false
         }
       ],
       "sku": "#940711",
-      "imageName": "908464-42265_PS_Next_Edge_150_2025_view01.tif",
-      "imagePath": "content/products/908464-42265_PS_Next_Edge_150_2025_view01.tif"
+      "imageName": "940711_rocket_motley.jpg",
+      "imagePath": "content/products/940711_rocket_motley.jpg"
     },
     {
       "title": [
         {
-          "text": "ROCKET PALE MAUVE ADJ.",
+          "text": "ROCKET PALE MAUVE ",
           "bold": true
+        },
+        {
+          "text": "ADJ.",
+          "bold": false
         }
       ],
       "sku": "#940712",
-      "imageName": "908474_PS_Storm_80_Mango_2026_view01.tif",
-      "imagePath": "content/products/908474_PS_Storm_80_Mango_2026_view01.tif"
+      "imageName": "940712_rocket_pale_mauve.jpg",
+      "imagePath": "content/products/940712_rocket_pale_mauve.jpg"
     }
   ],
   "boxDimensionsMm": {
@@ -77,6 +85,15 @@
   ],
   "boxTableFlow": {
     "mode": "auto"
+  },
+  "boxLayout": {
+    "template": "auto",
+    "logoPlacement": "auto",
+    "wordmarkAlign": "auto",
+    "wordmarkScale": 0.75,
+    "productImageScale": 1.05,
+    "titleColumnPercent": 50,
+    "brandGapMm": 0
   },
   "legalDisplay": {
     "showCompany": true,

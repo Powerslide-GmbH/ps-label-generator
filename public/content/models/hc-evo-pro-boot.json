@@ -14,8 +14,12 @@
   "mode": "single",
   "defaultTitle": [
     {
-      "text": "HC EVO PRO BOOT",
+      "text": "HC EVO ",
       "bold": true
+    },
+    {
+      "text": "PRO BOOT",
+      "bold": false
     }
   ],
   "defaultSku": "908468",
@@ -39,7 +43,16 @@
     "boxLabel": true,
     "sizeChart": true
   },
-  "defaultProductImageId": "908474_PS_Storm_80_Mango_2026_view01.tif",
+  "defaultProductImageId": "908468_hc_evo_pro_boot.jpg",
+  "boxLayout": {
+    "template": "auto",
+    "logoPlacement": "auto",
+    "wordmarkAlign": "auto",
+    "wordmarkScale": 0.9,
+    "productImageScale": 0.95,
+    "titleColumnPercent": 55,
+    "brandGapMm": 1
+  },
   "sizeTable": {
     "id": "ps-urban-hc-evo",
     "name": "PS-URBAN-HC-EVO",

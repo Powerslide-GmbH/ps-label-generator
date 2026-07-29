@@ -28,6 +28,37 @@ function logoSrc(path: string) {
   return path.startsWith('content/') ? `./${path}` : path
 }
 
+function logoFormat(logo: AssetRef): 'PDF vector' | 'SVG vector' | 'Raster' {
+  const source = `${logo.mime ?? ''} ${logo.name} ${logo.path}`.toLowerCase()
+  if (source.includes('application/pdf') || /\.pdf(?:$|[?#])/.test(source)) {
+    return 'PDF vector'
+  }
+  if (source.includes('svg') || /\.svg(?:$|[?#])/.test(source)) {
+    return 'SVG vector'
+  }
+  return 'Raster'
+}
+
+function LogoThumb({
+  logo,
+  srcOverride,
+}: {
+  logo: AssetRef
+  srcOverride?: string
+}) {
+  const format = logoFormat(logo)
+  const preview = srcOverride ?? logo.previewPath
+  if (format === 'PDF vector' && !preview) {
+    return (
+      <span className="logo-vector-placeholder" aria-label={`${logo.label}, vector PDF`}>
+        <strong>PDF</strong>
+        <small>VECTOR</small>
+      </span>
+    )
+  }
+  return <img src={logoSrc(preview ?? logo.path)} alt="" />
+}
+
 export function LogoPicker({
   logos,
   selected,
@@ -45,12 +76,14 @@ export function LogoPicker({
   const [draft, setDraft] = useState<string[]>(selected)
   const [localExtras, setLocalExtras] = useState<AssetRef[]>([])
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (open) {
       setDraft(selected)
       setQuery('')
+      setUploadError(null)
     }
   }, [open, selected])
 
@@ -125,16 +158,16 @@ export function LogoPicker({
   async function handleUpload(file: File | null) {
     if (!file || !onImportCustom) return
     setUploading(true)
+    setUploadError(null)
     try {
       const inline = await readInlineLogoFromFile(file)
-      if (!inline.cmykPreserving) {
-        window.alert('CMYK not guaranteed for raster/SVG uploads. Prefer PDF for production.')
-      }
       onImportCustom(inline)
       setLocalExtras((prev) => [...prev, inlineLogoToAssetRef(inline)])
       setDraft((prev) => (multiple ? [...prev.filter((id) => id !== inline.id), inline.id] : [inline.id]))
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not import logo.')
+      setUploadError(
+        err instanceof Error ? err.message : 'Could not import logo.',
+      )
     } finally {
       setUploading(false)
     }
@@ -159,17 +192,22 @@ export function LogoPicker({
       >
         <div className="logo-trigger-header">
           <span className="logo-trigger-label">{label}</span>
-          {!dense && <span className="logo-trigger-hint">{summary}</span>}
+          {!dense && (
+            <span className="logo-trigger-hint">
+              {summary}
+              <span aria-hidden> ›</span>
+            </span>
+          )}
         </div>
         <div className="logo-trigger-body">
           {selectedAssets.length > 0 ? (
             <div className="logo-trigger-previews">
               {selectedAssets.map((logo) => (
                 <span key={logo.id} className="logo-preview" title={logo.label}>
-                  <img
-                    src={previewSrcById?.[logo.id] ?? logoSrc(logo.path)}
-                    alt=""
-                  />
+                  <LogoThumb logo={logo} srcOverride={previewSrcById?.[logo.id]} />
+                  {!dense && (
+                    <span className="logo-preview-name">{logo.label}</span>
+                  )}
                   {multiple && (
                     <span className="logo-preview-tools">
                       <span
@@ -221,26 +259,41 @@ export function LogoPicker({
       {open && (
         <div className="modal-backdrop" onClick={() => setOpen(false)}>
           <div
-            className="modal"
+            className="modal logo-modal"
             role="dialog"
             aria-modal="true"
             aria-label={label}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-head">
-              <h3>{label}</h3>
-              <button type="button" onClick={() => setOpen(false)}>
+              <div>
+                <h3>{label}</h3>
+                <p>
+                  {multiple
+                    ? 'Choose one or more logos. Their order is used in the label.'
+                    : 'Choose the logo used in this position.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="modal-close"
+                aria-label="Close logo selector"
+                onClick={() => setOpen(false)}
+              >
                 {'\u00D7'}
               </button>
             </div>
             <div className="modal-toolbar">
-              <input
-                className="search"
-                placeholder="Search logos…"
-                value={query}
-                autoFocus
-                onChange={(e) => setQuery(e.target.value)}
-              />
+              <label className="logo-search">
+                <span aria-hidden>⌕</span>
+                <input
+                  className="search"
+                  placeholder="Search by name or format…"
+                  value={query}
+                  autoFocus
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </label>
               {canUpload && (
                 <>
                   <input
@@ -255,13 +308,35 @@ export function LogoPicker({
                   />
                   <button
                     type="button"
-                    className="secondary"
+                    className="secondary logo-upload"
                     disabled={uploading}
                     onClick={() => fileRef.current?.click()}
                   >
-                    {uploading ? 'Uploading…' : 'Upload from PC'}
+                    {uploading ? 'Importing…' : '+ Import logo'}
                   </button>
                 </>
+              )}
+            </div>
+            {canUpload && (
+              <p className="modal-upload-hint">
+                PDF or SVG keeps vector quality. PNG and JPG are also supported
+                and converted for print during PDF export.
+              </p>
+            )}
+            {uploadError && (
+              <p className="logo-upload-error" role="alert">
+                {uploadError}
+              </p>
+            )}
+            <div className="modal-selection-bar">
+              <span>
+                <strong>{draft.length}</strong>{' '}
+                {draft.length === 1 ? 'logo selected' : 'logos selected'}
+              </span>
+              {draft.length > 0 && (
+                <button type="button" onClick={() => setDraft([])}>
+                  Clear selection
+                </button>
               )}
             </div>
             <div className="logo-grid modal-grid">
@@ -274,20 +349,42 @@ export function LogoPicker({
                     className={`logo-tile ${active ? 'active' : ''}`}
                     onClick={() => toggleDraft(logo.id)}
                     title={logo.name}
+                    aria-pressed={active}
                   >
-                    <img src={logoSrc(logo.path)} alt={logo.label} />
-                    <span>{logo.label}</span>
+                    <span className="logo-tile-visual">
+                      <LogoThumb logo={logo} />
+                    </span>
+                    <span className="logo-format-badge">{logoFormat(logo)}</span>
+                    {active && (
+                      <span className="logo-tile-check" aria-hidden>
+                        {multiple ? draft.indexOf(logo.id) + 1 : '✓'}
+                      </span>
+                    )}
+                    <span className="logo-tile-name">{logo.label}</span>
+                    <span className="logo-tile-file">{logo.name}</span>
                   </button>
                 )
               })}
-              {!filtered.length && <p className="muted">No logos match.</p>}
+              {!filtered.length && (
+                <div className="logo-empty-state">
+                  <strong>No matching logos</strong>
+                  <span>Try another search or import a new file.</span>
+                </div>
+              )}
             </div>
             <div className="modal-foot">
+              <span className="modal-foot-note">
+                Changes apply only when you confirm.
+              </span>
               <button type="button" onClick={() => setOpen(false)}>
                 Cancel
               </button>
-              <button type="button" className="primary" onClick={confirm}>
-                Apply ({draft.length})
+              <button
+                type="button"
+                className="primary"
+                onClick={confirm}
+              >
+                Apply selection
               </button>
             </div>
           </div>

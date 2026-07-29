@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-29T09:05:56.988Z",
+  "generatedAt": "2026-07-29T11:31:41.143Z",
   "logos": [
     {
       "id": "PS_big_CMYK",
@@ -171,10 +171,52 @@
   ],
   "products": [
     {
+      "id": "904719_triple_x_dark_grey",
+      "name": "904719_triple_x_dark_grey.tif",
+      "label": "904719 triple x dark grey",
+      "path": "content/products/904719_triple_x_dark_grey.tif"
+    },
+    {
+      "id": "904720_triple_x_hot_pink",
+      "name": "904720_triple_x_hot_pink.tif",
+      "label": "904720 triple x hot pink",
+      "path": "content/products/904720_triple_x_hot_pink.tif"
+    },
+    {
+      "id": "904722_accel_race_ti_boot_only",
+      "name": "904722_accel_race_ti_boot_only.tif",
+      "label": "904722 accel race ti boot only",
+      "path": "content/products/904722_accel_race_ti_boot_only.tif"
+    },
+    {
+      "id": "904723_accel_evo_pds_pink",
+      "name": "904723_accel_evo_pds_pink.tif",
+      "label": "904723 accel evo pds pink",
+      "path": "content/products/904723_accel_evo_pds_pink.tif"
+    },
+    {
+      "id": "904724_accel_evo_pds_silver",
+      "name": "904724_accel_evo_pds_silver.tif",
+      "label": "904724 accel evo pds silver",
+      "path": "content/products/904724_accel_evo_pds_silver.tif"
+    },
+    {
       "id": "908464-42265_PS_Next_Edge_150_2025_view01",
       "name": "908464-42265_PS_Next_Edge_150_2025_view01.tif",
       "label": "908464 42265 PS Next Edge 150 2025 view01",
       "path": "content/products/908464-42265_PS_Next_Edge_150_2025_view01.tif"
+    },
+    {
+      "id": "908468_hc_evo_pro_boot",
+      "name": "908468_hc_evo_pro_boot.jpg",
+      "label": "908468 hc evo pro boot",
+      "path": "content/products/908468_hc_evo_pro_boot.jpg"
+    },
+    {
+      "id": "908472_zoom_torelli_pro_80",
+      "name": "908472_zoom_torelli_pro_80.jpg",
+      "label": "908472 zoom torelli pro 80",
+      "path": "content/products/908472_zoom_torelli_pro_80.jpg"
     },
     {
       "id": "908474_PS_Storm_80_Mango_2026_view01",
@@ -187,6 +229,24 @@
       "name": "908482_Zoom_Pro_90_Sand_2026_view01.tif",
       "label": "908482 Zoom Pro 90 Sand 2026 view01",
       "path": "content/products/908482_Zoom_Pro_90_Sand_2026_view01.tif"
+    },
+    {
+      "id": "908489_next_outback_150_pds",
+      "name": "908489_next_outback_150_pds.jpg",
+      "label": "908489 next outback 150 pds",
+      "path": "content/products/908489_next_outback_150_pds.jpg"
+    },
+    {
+      "id": "940711_rocket_motley",
+      "name": "940711_rocket_motley.jpg",
+      "label": "940711 rocket motley",
+      "path": "content/products/940711_rocket_motley.jpg"
+    },
+    {
+      "id": "940712_rocket_pale_mauve",
+      "name": "940712_rocket_pale_mauve.jpg",
+      "label": "940712 rocket pale mauve",
+      "path": "content/products/940712_rocket_pale_mauve.jpg"
     }
   ],
   "sizecharts": [

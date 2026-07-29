@@ -2,7 +2,7 @@ import type { LogoRef } from './types'
 
 export type InlineLogo = Extract<LogoRef, { kind: 'inline' }>
 
-/** Read a local PDF/SVG/PNG/JPG into an inline logo ref for the document. */
+/** Read a local vector PDF/SVG or raster PNG/JPG into the document. */
 export async function readInlineLogoFromFile(file: File): Promise<InlineLogo> {
   const lower = file.name.toLowerCase()
   const ok =
@@ -13,11 +13,13 @@ export async function readInlineLogoFromFile(file: File): Promise<InlineLogo> {
     lower.endsWith('.jpeg') ||
     /^(application\/pdf|image\/(svg\+xml|png|jpeg))$/i.test(file.type)
   if (!ok) {
-    throw new Error('Use a PDF, SVG, PNG, or JPG logo file.')
+    throw new Error('Use a vector PDF/SVG or a PNG/JPG logo file.')
   }
 
   const isPdf =
     lower.endsWith('.pdf') || file.type.toLowerCase() === 'application/pdf'
+  const isSvg =
+    lower.endsWith('.svg') || file.type.toLowerCase() === 'image/svg+xml'
 
   const data = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
@@ -45,6 +47,7 @@ export async function readInlineLogoFromFile(file: File): Promise<InlineLogo> {
     data,
     aspectRatio,
     cmykPreserving: isPdf,
+    sourceFormat: isPdf ? 'pdf' : isSvg ? 'svg' : 'raster',
   }
 }
 
