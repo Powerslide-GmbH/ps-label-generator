@@ -1038,7 +1038,6 @@ export function buildResponsiveBoxLabelScene(
       compact,
       tablesBottom,
       tableStartY,
-      marginX,
       marginBottom,
     })
   }
@@ -1108,7 +1107,6 @@ function layoutSingleProduct(
     compact: boolean
     tablesBottom: number
     tableStartY: number
-    marginX: number
     marginBottom: number
   },
 ): void {
@@ -1139,7 +1137,6 @@ function layoutSingleProduct(
     compact,
     tablesBottom,
     tableStartY,
-    marginX,
     marginBottom,
   } = args
 
@@ -1285,8 +1282,10 @@ function layoutSingleProduct(
         alignY: 'bottom',
       })
     } else {
+      const imageLeft = contentLeft + textColW + 4
+      const imageAreaW = Math.max(20, contentRight - imageLeft)
       const imgW = Math.min(
-        contentW * 0.65,
+        imageAreaW * 0.96,
         Math.min(72 * (labelW / 140), contentW * 0.54) *
           doc.boxLayout.productImageScale,
       )
@@ -1296,13 +1295,13 @@ function layoutSingleProduct(
       )
       nodes.push({
         type: 'image',
-        x: labelX + labelW - marginX - imgW,
+        x: imageLeft + (imageAreaW - imgW) / 2,
         y: imgTop,
         w: imgW,
         h: imgH,
         href,
         fit: 'contain',
-        alignX: 'right',
+        alignX: 'center',
         alignY: 'bottom',
       })
     }
@@ -1436,7 +1435,7 @@ function layoutDualProducts(
     strategy !== 'dual-side-by-side-junior' &&
     plainText(doc.title).trim()
   ) {
-    const sharedTitleSize = Math.min(titleSize, compact ? 3.35 : 4)
+    const sharedTitleSize = Math.min(titleSize, 3.35)
     const sharedTitleWidth =
       wordmarkAlign === 'right' ? contentW * 0.56 : contentW * 0.72
     const sharedTitleX =
@@ -1469,8 +1468,7 @@ function layoutDualProducts(
               : undefined,
       })
     })
-    cursorY +=
-      sharedLines.length * (sharedTitleSize + 0.45) + (compact ? 2.2 : 2.8)
+    cursorY += sharedLines.length * (sharedTitleSize + 0.45) + 2.2
   }
 
   if (logos.length) {
@@ -1479,7 +1477,7 @@ function layoutDualProducts(
   }
 
   const productBottomLimit = brandTop + brandAreaH
-  const dualTitleSize = Math.min(titleSize, compact ? 3.15 : 3.7)
+  const dualTitleSize = Math.min(titleSize, compact ? 3.15 : 3.2)
   const sparseFooter =
     companyLines(doc.legal, doc.legalDisplay, compact).length === 0 &&
     classLines(doc.legal, doc.legalDisplay, compact).length === 0
@@ -1529,7 +1527,7 @@ function layoutDualProducts(
     }
 
     if (slot.sku.trim()) {
-      const skuFs = Math.min(skuSize, compact ? 3.1 : skuSize)
+      const skuFs = Math.min(skuSize, compact ? 3.1 : 3.2)
       const skuText = slot.sku
       const skuW = estimateTextWidth(skuText, skuFs, false)
       nodes.push({

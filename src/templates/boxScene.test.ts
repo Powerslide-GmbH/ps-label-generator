@@ -244,6 +244,79 @@ describe('layoutStrategy', () => {
     expect(buildResponsiveBoxLabelScene(doc, shortTable, [], null).layoutStrategy)
       .toBe('dual-side-by-side-junior')
   })
+
+  it('keeps panoramic single-product artwork outside the text column', () => {
+    const table = tableFor('single-panorama', 'dual', dualRows(13))
+    const doc = documentFromPreset(
+      basePreset({
+        id: 'single-panorama',
+        name: 'PANORAMIC PRODUCT',
+        mode: 'dual',
+        boxProductMode: 'single',
+        boxDimensionsMm: { width: 120, height: 100 },
+        boxLayout: { titleColumnPercent: 50 },
+        sizeTable: table,
+      }),
+      migrateDocument({}).legal,
+    )
+    const scene = buildResponsiveBoxLabelScene(doc, table, [], 'panorama.tif', {
+      wordmarkHref: 'wordmark.svg',
+    })
+    const title = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'text' }> =>
+        node.type === 'text' &&
+        node.runs.some((run) => run.text.includes('PANORAMIC PRODUCT')),
+    )
+    const image = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'image' }> =>
+        node.type === 'image' && node.href === 'panorama.tif',
+    )
+    expect(title).toBeDefined()
+    expect(image).toBeDefined()
+    expect((image?.x ?? 0) - (title?.x ?? 0)).toBeGreaterThan(40)
+  })
+
+  it('caps product title and SKU sizes when a large preset switches to dual', () => {
+    const table = tableFor('dual-from-large', 'dual', dualRows(6))
+    const doc = documentFromPreset(
+      basePreset({
+        id: 'dual-from-large',
+        name: 'SHARED MODEL',
+        mode: 'dual',
+        boxProductMode: 'dual',
+        titleSizes: { box: 8 },
+        boxProducts: [
+          {
+            title: [{ text: 'COLOR ONE', bold: true }],
+            sku: 'SKU-ONE',
+            imagePath: null,
+            imageName: null,
+          },
+          {
+            title: [{ text: 'COLOR TWO', bold: true }],
+            sku: 'SKU-TWO',
+            imagePath: null,
+            imageName: null,
+          },
+        ],
+        sizeTable: table,
+      }),
+      migrateDocument({}).legal,
+    )
+    const scene = buildResponsiveBoxLabelScene(doc, table, [], null)
+    const productText = scene.nodes.filter(
+      (node): node is Extract<SceneNode, { type: 'text' }> =>
+        node.type === 'text' &&
+        node.y > 20 &&
+        node.runs.some(
+          (run) => run.text === 'COLOR ONE' || run.text === 'SKU-ONE',
+        ),
+    )
+    expect(productText.length).toBeGreaterThanOrEqual(2)
+    expect(
+      Math.max(...productText.flatMap((node) => node.runs.map((run) => run.fontSize ?? 0))),
+    ).toBeLessThanOrEqual(3.2)
+  })
 })
 
 describe('decideTableFlow', () => {

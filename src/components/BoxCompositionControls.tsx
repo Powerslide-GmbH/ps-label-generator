@@ -261,6 +261,95 @@ export function BoxCompositionControls({
             onChange={(marginBottom) => patchLayout({ marginBottom })}
           />
         </div>
+        <div className="advanced-output-settings">
+          <h3>Typography & sheets</h3>
+          <div className="layout-controls-grid">
+            <NumberControl
+              label="Size normal title (mm)"
+              value={doc.titleSizes.sizeLabel}
+              min={1.2}
+              max={12}
+              step={0.1}
+              onChange={(sizeLabel) =>
+                onChange({
+                  ...doc,
+                  titleSizes: { ...doc.titleSizes, sizeLabel },
+                })
+              }
+            />
+            <NumberControl
+              label="Size double title (mm)"
+              value={doc.titleSizes.sizeLabelDouble}
+              min={1.2}
+              max={12}
+              step={0.1}
+              onChange={(sizeLabelDouble) =>
+                onChange({
+                  ...doc,
+                  titleSizes: { ...doc.titleSizes, sizeLabelDouble },
+                })
+              }
+            />
+            <NumberControl
+              label="Box title (mm)"
+              value={doc.titleSizes.box}
+              min={3}
+              max={16}
+              step={0.1}
+              onChange={(box) =>
+                onChange({
+                  ...doc,
+                  titleSizes: { ...doc.titleSizes, box },
+                })
+              }
+            />
+            <NumberControl
+              label="Size chart title (px)"
+              value={doc.titleSizes.sizeChart}
+              min={16}
+              max={72}
+              step={1}
+              onChange={(sizeChart) =>
+                onChange({
+                  ...doc,
+                  titleSizes: { ...doc.titleSizes, sizeChart },
+                })
+              }
+            />
+            <NumberControl
+              label="Normal sheet columns"
+              value={doc.sizeLabelSheet.normalColumns}
+              min={1}
+              max={6}
+              step={1}
+              onChange={(normalColumns) =>
+                onChange({
+                  ...doc,
+                  sizeLabelSheet: {
+                    ...doc.sizeLabelSheet,
+                    normalColumns: Math.round(normalColumns),
+                  },
+                })
+              }
+            />
+            <NumberControl
+              label="Double sheet columns"
+              value={doc.sizeLabelSheet.doubleColumns}
+              min={1}
+              max={4}
+              step={1}
+              onChange={(doubleColumns) =>
+                onChange({
+                  ...doc,
+                  sizeLabelSheet: {
+                    ...doc.sizeLabelSheet,
+                    doubleColumns: Math.round(doubleColumns),
+                  },
+                })
+              }
+            />
+          </div>
+        </div>
         <button
           type="button"
           className="subtle reset-layout"
