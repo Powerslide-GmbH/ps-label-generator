@@ -84,10 +84,14 @@ export type SceneAssets = {
   /** Colored brand wordmark (box + size-sheet footer). */
   wordmarkHref?: string
   boxWordmarkHref?: string
+  /** Natural width / height of the selected box wordmark. */
+  boxWordmarkAspectRatio?: number
   /** Black wordmark for individual size-label pieces. */
   sizeWordmarkHref?: string
   /** Page header PS badge (size-label sheets). */
   pageLogoHref?: string
+  /** Natural width / height of the page logo, used to reserve its real header width. */
+  pageLogoAspectRatio?: number
   /**
    * Three location+material pairs for size labels (always 6 logos).
    * Location icons are fixed; material icons come from the 3 selectors.
@@ -346,15 +350,32 @@ function drawSizeSystemTable(opts: {
       })
     }
     // Optical vertical center for alphabetic baseline ≈ 0.35em above mid
+    const fitCellFont = (
+      text: string,
+      requested: number,
+      availableWidth: number,
+      minimum: number,
+    ) => {
+      const estimatedEm = [...text].reduce(
+        (width, char) => width + (/\s/.test(char) ? 0.3 : /[1Iil]/.test(char) ? 0.34 : 0.61),
+        0,
+      )
+      if (estimatedEm <= 0) return requested
+      return Math.max(minimum, Math.min(requested, availableWidth / estimatedEm))
+    }
+    const headerText = opts.headers[i] ?? ''
+    const valueText = opts.values[i] ?? ''
+    const headerFont = fitCellFont(headerText, opts.headerFont, colW - 0.45, 0.9)
+    const valueFont = fitCellFont(valueText, opts.valueFont, colW - 0.6, 1.25)
     const headerBaseline =
-      opts.y + opts.headerH / 2 + opts.headerFont * 0.35
+      opts.y + opts.headerH / 2 + headerFont * 0.35
     const valueBaseline =
-      opts.y + opts.headerH + opts.valueH / 2 + opts.valueFont * 0.35
+      opts.y + opts.headerH + opts.valueH / 2 + valueFont * 0.35
     nodes.push({
       type: 'text',
       x: cx,
       y: headerBaseline,
-      runs: [{ text: opts.headers[i] ?? '', bold: true, fontSize: opts.headerFont }],
+      runs: [{ text: headerText, bold: true, fontSize: headerFont }],
       fill: '#fff',
       anchor: 'middle',
     })
@@ -362,7 +383,7 @@ function drawSizeSystemTable(opts: {
       type: 'text',
       x: cx,
       y: valueBaseline,
-      runs: [{ text: opts.values[i] ?? '', bold: true, fontSize: opts.valueFont }],
+      runs: [{ text: valueText, bold: true, fontSize: valueFont }],
       fill: '#000',
       anchor: 'middle',
     })
@@ -395,8 +416,9 @@ function sizeLabelPieceDouble(
   ]
 
   const pieceWordmark = assets.sizeWordmarkHref || assets.wordmarkHref
-  const wmW = 10
-  const wmH = 3.2
+  const wordmarkScale = doc.logoScales.brandWordmark
+  const wmW = 10 * wordmarkScale
+  const wmH = 3.2 * wordmarkScale
   if (pieceWordmark) {
     nodes.push({
       type: 'image',
@@ -406,10 +428,13 @@ function sizeLabelPieceDouble(
       h: wmH,
       href: pieceWordmark,
       fit: 'contain',
+      alignX: 'left',
     })
   }
 
-  const titleX = leftX + 11.8
+  const titleX = pieceWordmark
+    ? leftX + brandPad + wmW + 0.6
+    : leftX + brandPad
   const titleWidth = leftX + leftW - contentPad - titleX
   const titleSize = doc.titleSizes.sizeLabelDouble
   const titleY = y + padY + 2.25
@@ -519,20 +544,23 @@ function sizeLabelPieceNormal(
   ]
 
   const pieceWordmark = assets.sizeWordmarkHref || assets.wordmarkHref
-  const wmH = 2.1
+  const wordmarkScale = doc.logoScales.brandWordmark
+  const wmH = 2.1 * wordmarkScale
+  const wmW = 20.8 * wordmarkScale
   if (pieceWordmark) {
     nodes.push({
       type: 'image',
       x: x + brandPad,
       y: y + 1.6,
-      w: 20.8,
+      w: wmW,
       h: wmH,
       href: pieceWordmark,
       fit: 'contain',
+      alignX: 'left',
     })
   }
 
-  const titleY = y + 6.7
+  const titleY = pieceWordmark ? y + 1.6 + wmH + 3 : y + 4.6
   nodes.push({
     type: 'text',
     x: x + brandPad,
@@ -555,7 +583,7 @@ function sizeLabelPieceNormal(
     anchor: 'end',
   })
 
-  const tableY = y + 8.0
+  const tableY = Math.max(y + 8.0, titleY + 0.9)
   nodes.push(
     ...drawSizeSystemTable({
       x: x + pad,
@@ -640,7 +668,13 @@ export function buildSizeLabelScene(
   assets: SceneAssets = {},
 ): LabelScene {
   const label = double ? SIZE_LABEL_DOUBLE : SIZE_LABEL_NORMAL
-  const headerH = double ? 18 : 22
+  const pageBadgeScale = doc.logoScales.pageBadge
+  const pageLogoY = double ? 4 : 5
+  const pageLogoH = (double ? 10 : 12) * pageBadgeScale
+  const headerH = Math.max(
+    double ? 18 : 22,
+    assets.pageLogoHref ? pageLogoY + pageLogoH + 2 : 0,
+  )
   const footerH = double ? 12 : 14
   const sheet = double ? SIZE_DOUBLE_SHEET_MM : SIZE_NORMAL_SHEET_MM
   const { page, slots } = packLabels(table.rows.length, label.w, label.h, {
@@ -658,18 +692,25 @@ export function buildSizeLabelScene(
   ]
 
   // Page chrome — matches documentation sheets
+  const pageLogoX = double ? 8 : 10
+  const pageLogoMaxW = (double ? 34 : 42) * pageBadgeScale
+  const pageLogoAspect = Math.max(assets.pageLogoAspectRatio ?? 1, 0.25)
+  const pageLogoW = Math.min(pageLogoH * pageLogoAspect, pageLogoMaxW)
   if (assets.pageLogoHref) {
     nodes.push({
       type: 'image',
-      x: double ? 8 : 10,
-      y: double ? 4 : 5,
-      w: double ? 10 : 12,
-      h: double ? 10 : 12,
+      x: pageLogoX,
+      y: pageLogoY,
+      w: pageLogoW,
+      h: pageLogoH,
       href: assets.pageLogoHref,
       fit: 'contain',
+      alignX: 'left',
     })
   }
-  const titleX = assets.pageLogoHref ? (double ? 22 : 26) : double ? 8 : 10
+  const titleX = assets.pageLogoHref
+    ? pageLogoX + pageLogoW + (double ? 3 : 4)
+    : pageLogoX
   nodes.push({
     type: 'text',
     x: titleX,
@@ -701,14 +742,20 @@ export function buildSizeLabelScene(
   // Sheet footer wordmark stays in brand color (as selected)
   const footerWordmark = assets.boxWordmarkHref || assets.wordmarkHref
   if (footerWordmark) {
+    const footerScale = doc.logoScales.brandWordmark
+    const footerW = (double ? 38 : 42) * footerScale
+    const footerH = (double ? 4.2 : 5) * footerScale
+    const footerRight = double ? 10 : 13
+    const footerBottom = double ? 3.8 : 5
     nodes.push({
       type: 'image',
-      x: page.w - (double ? 48 : 55),
-      y: page.h - (double ? 8 : 10),
-      w: double ? 38 : 42,
-      h: double ? 4.2 : 5,
+      x: page.w - footerRight - footerW,
+      y: page.h - footerBottom - footerH,
+      w: footerW,
+      h: footerH,
       href: footerWordmark,
       fit: 'contain',
+      alignX: 'right',
     })
   }
 
@@ -742,7 +789,9 @@ export function buildSizeChartScene(
   ]
 
   const logos = logoHrefs.filter(Boolean).slice(0, 3)
-  const logoW = 82
+  const logoScale = doc.logoScales.sizeChartLogos
+  const logoW = 82 * logoScale
+  const logoH = 54 * logoScale
   const logoGap = 14
   const logoY = 28
   logos.forEach((href, i) => {
@@ -751,7 +800,7 @@ export function buildSizeChartScene(
       x: 40 + i * (logoW + logoGap),
       y: logoY,
       w: logoW,
-      h: 54,
+      h: logoH,
       href,
       fit: 'contain',
     })

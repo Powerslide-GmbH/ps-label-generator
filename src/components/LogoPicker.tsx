@@ -21,6 +21,9 @@ type Props = {
   /** Persist a PC upload into the document (customLogos). Default: enabled. */
   allowUpload?: boolean
   onImportCustom?: (logo: InlineLogo) => void
+  /** Relative visual size for this logo group (1 = 100%). */
+  scale?: number
+  onScaleChange?: (scale: number) => void
 }
 
 function logoSrc(path: string) {
@@ -70,6 +73,8 @@ export function LogoPicker({
   hint,
   allowUpload = true,
   onImportCustom,
+  scale,
+  onScaleChange,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -181,79 +186,122 @@ export function LogoPicker({
         : selectedAssets[0]?.label ?? 'Selected'
 
   const canUpload = allowUpload && Boolean(onImportCustom)
+  const hasScale = scale != null && Boolean(onScaleChange)
+  const scalePercent = Math.round((scale ?? 1) * 100)
+  const setScalePercent = (value: number) => {
+    if (!onScaleChange || !Number.isFinite(value)) return
+    onScaleChange(Math.min(1.5, Math.max(0.5, value / 100)))
+  }
 
   return (
     <div className={`logo-picker ${dense ? 'dense' : 'roomy'}`}>
-      <button
-        type="button"
-        className="logo-trigger"
-        onClick={() => setOpen(true)}
-        aria-haspopup="dialog"
-      >
-        <div className="logo-trigger-header">
-          <span className="logo-trigger-label">{label}</span>
-          {!dense && (
-            <span className="logo-trigger-hint">
-              {summary}
-              <span aria-hidden> ›</span>
-            </span>
-          )}
-        </div>
-        <div className="logo-trigger-body">
-          {selectedAssets.length > 0 ? (
-            <div className="logo-trigger-previews">
-              {selectedAssets.map((logo) => (
-                <span key={logo.id} className="logo-preview" title={logo.label}>
-                  <LogoThumb logo={logo} srcOverride={previewSrcById?.[logo.id]} />
-                  {!dense && (
-                    <span className="logo-preview-name">{logo.label}</span>
-                  )}
-                  {multiple && (
-                    <span className="logo-preview-tools">
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        title="Move left"
-                        onClick={(e) => moveSelected(e, logo.id, -1)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') moveSelected(e, logo.id, -1)
-                        }}
-                      >
-                        {'\u2039'}
+      <div className={`logo-picker-main ${hasScale ? 'has-scale' : ''}`}>
+        <button
+          type="button"
+          className="logo-trigger"
+          onClick={() => setOpen(true)}
+          aria-haspopup="dialog"
+        >
+          <div className="logo-trigger-header">
+            <span className="logo-trigger-label">{label}</span>
+            {!dense && (
+              <span className="logo-trigger-hint">
+                {summary}
+                <span aria-hidden> ›</span>
+              </span>
+            )}
+          </div>
+          <div className="logo-trigger-body">
+            {selectedAssets.length > 0 ? (
+              <div className="logo-trigger-previews">
+                {selectedAssets.map((logo) => (
+                  <span key={logo.id} className="logo-preview" title={logo.label}>
+                    <LogoThumb logo={logo} srcOverride={previewSrcById?.[logo.id]} />
+                    {!dense && (
+                      <span className="logo-preview-name">{logo.label}</span>
+                    )}
+                    {multiple && (
+                      <span className="logo-preview-tools">
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          title="Move left"
+                          onClick={(e) => moveSelected(e, logo.id, -1)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') moveSelected(e, logo.id, -1)
+                          }}
+                        >
+                          {'\u2039'}
+                        </span>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          title="Move right"
+                          onClick={(e) => moveSelected(e, logo.id, 1)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') moveSelected(e, logo.id, 1)
+                          }}
+                        >
+                          {'\u203A'}
+                        </span>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          title="Remove"
+                          onClick={(e) => removeSelected(e, logo.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') removeSelected(e, logo.id)
+                          }}
+                        >
+                          {'\u00D7'}
+                        </span>
                       </span>
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        title="Move right"
-                        onClick={(e) => moveSelected(e, logo.id, 1)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') moveSelected(e, logo.id, 1)
-                        }}
-                      >
-                        {'\u203A'}
-                      </span>
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        title="Remove"
-                        onClick={(e) => removeSelected(e, logo.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') removeSelected(e, logo.id)
-                        }}
-                      >
-                        {'\u00D7'}
-                      </span>
-                    </span>
-                  )}
-                </span>
-              ))}
+                    )}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="logo-trigger-empty">+</span>
+            )}
+            {dense && <span className="logo-trigger-hint">{summary}</span>}
+          </div>
+        </button>
+        {hasScale && (
+          <div className="logo-scale-control" aria-label={`${label} scale`}>
+            <span>Scale</span>
+            <div>
+              <button
+                type="button"
+                aria-label={`Decrease ${label} scale`}
+                disabled={scalePercent <= 50}
+                onClick={() => setScalePercent(scalePercent - 5)}
+              >
+                −
+              </button>
+              <label>
+                <input
+                  type="number"
+                  min={50}
+                  max={150}
+                  step={5}
+                  value={scalePercent}
+                  aria-label={`${label} scale percentage`}
+                  onChange={(e) => setScalePercent(Number(e.target.value))}
+                />
+                <span>%</span>
+              </label>
+              <button
+                type="button"
+                aria-label={`Increase ${label} scale`}
+                disabled={scalePercent >= 150}
+                onClick={() => setScalePercent(scalePercent + 5)}
+              >
+                +
+              </button>
             </div>
-          ) : (
-            <span className="logo-trigger-empty">+</span>
-          )}
-          {dense && <span className="logo-trigger-hint">{summary}</span>}
-        </div>
-      </button>
+          </div>
+        )}
+      </div>
       {hint && <p className="logo-picker-hint">{hint}</p>}
 
       {open && (

@@ -799,13 +799,13 @@ export function buildResponsiveBoxLabelScene(
   const logosOnTable = logoPlacement === 'table'
   const logoList = resolveLogos(logos)
   const logoH =
-    strategy === 'dual-compact-junior'
+    (strategy === 'dual-compact-junior'
       ? 5.2
       : strategy === 'dual-wide-table'
         ? 5
         : compact
           ? 6
-          : 7.2
+          : 7.2) * doc.logoScales.boxLogos
   const brandBlue = doc.brandColorHex
   const pureK = doc.boxTextColorMode === 'pure-k'
   const companyFill = pureK ? PURE_K : brandBlue
@@ -898,8 +898,12 @@ export function buildResponsiveBoxLabelScene(
     const wordmark = assets.boxWordmarkHref || assets.wordmarkHref
     let hy = tableStartY
     if (wordmark) {
-      const wmH = Math.min(8.5, h * 0.28)
-      const wmW = Math.min(leftW * 1.05, 48)
+      const wmH =
+        Math.min(8.5, h * 0.28) * doc.logoScales.brandWordmark
+      const wmMaxW = Math.min(leftW * 1.05, 48)
+      const wmW = assets.boxWordmarkAspectRatio
+        ? Math.min(wmMaxW, assets.boxWordmarkAspectRatio * wmH)
+        : wmMaxW
       nodes.push({
         type: 'image',
         x: contentLeft,
@@ -1172,7 +1176,7 @@ function layoutSingleProduct(
         : contentW
   const singleTitleSize =
     strategy === 'single-split-table' ? Math.min(titleSize, 4.2) : titleSize
-  const wordmarkScale = doc.boxLayout.wordmarkScale
+  const wordmarkScale = doc.logoScales.brandWordmark
   const wmH =
     Math.min(
       strategy === 'single-split-table' ? 8.5 : 8.2,
@@ -1185,10 +1189,13 @@ function layoutSingleProduct(
       strategy === 'single-split-table'
         ? labelX + 1.8
         : contentLeft
-    const wmW = Math.min(
+    const wmMaxW = Math.min(
       strategy === 'single-split-table' ? textColW * 1.05 : textColW * 1.15,
       66 * (labelW / 140) * wordmarkScale,
     )
+    const wmW = assets.boxWordmarkAspectRatio
+      ? Math.min(wmMaxW, assets.boxWordmarkAspectRatio * wmH)
+      : wmMaxW
     nodes.push({
       type: 'image',
       x: wordmarkX,
@@ -1401,17 +1408,20 @@ function layoutDualProducts(
         ? 5.8
         : 7.2,
     Math.max(5.2, brandAreaH * (wordmarkAlign === 'center' ? 0.18 : 0.14)),
-  ) * doc.boxLayout.wordmarkScale
+  ) * doc.logoScales.brandWordmark
 
   // Always draw shared wordmark when provided (PDS right / Rocket center / other left).
   if (wordmark) {
-    const wmW =
+    const wmMaxW =
       wordmarkAlign === 'center'
         ? Math.min(contentW * 0.72, 78)
         : wordmarkAlign === 'right'
           ? Math.min(contentW * 0.48, 58)
           : Math.min(contentW * 0.42, 52)
-    const scaledW = wmW * doc.boxLayout.wordmarkScale
+    const scaledMaxW = wmMaxW * doc.logoScales.brandWordmark
+    const scaledW = assets.boxWordmarkAspectRatio
+      ? Math.min(scaledMaxW, assets.boxWordmarkAspectRatio * wmH)
+      : scaledMaxW
     const x =
       wordmarkAlign === 'right'
         ? contentRight - scaledW

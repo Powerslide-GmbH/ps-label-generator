@@ -186,6 +186,13 @@ export type SizeLabelSheetSettings = {
   doubleColumns: number
 }
 
+export type LogoScaleSettings = {
+  brandWordmark: number
+  pageBadge: number
+  boxLogos: number
+  sizeChartLogos: number
+}
+
 /** One product preset: branding + outputs + embedded size table. */
 export type ModelPreset = {
   id: string
@@ -210,6 +217,7 @@ export type ModelPreset = {
   materials?: MaterialSelection
   titleSizes?: Partial<TitleSizes>
   sizeLabelSheet?: Partial<SizeLabelSheetSettings>
+  logoScales?: Partial<LogoScaleSettings>
   legalProfileId: string
   outputs: OutputSelection
   defaultProductImageId?: string
@@ -241,6 +249,7 @@ export type LabelDocument = {
   materials: MaterialSelection
   titleSizes: TitleSizes
   sizeLabelSheet: SizeLabelSheetSettings
+  logoScales: LogoScaleSettings
   sizeChartId: string
   mode: SizeGroupMode
   legal: LegalProfile
@@ -414,4 +423,11 @@ export const DEFAULT_BOX_LAYOUT: BoxLayoutSettings = {
   brandGapMm: 0,
 }
 
-export const STORAGE_VERSION = 6
+export const DEFAULT_LOGO_SCALES: LogoScaleSettings = {
+  brandWordmark: 1,
+  pageBadge: 1,
+  boxLogos: 1,
+  sizeChartLogos: 1,
+}
+
+export const STORAGE_VERSION = 7

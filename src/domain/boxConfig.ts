@@ -8,6 +8,7 @@ import type {
   LabelDocument,
   LegalDisplayOptions,
   LegalProfile,
+  LogoScaleSettings,
   LogoRef,
   ModelPreset,
   SizeChartTable,
@@ -21,6 +22,7 @@ import {
   DEFAULT_BOX_LAYOUT,
   DEFAULT_BOX_TABLE_FLOW,
   DEFAULT_LEGAL_DISPLAY,
+  DEFAULT_LOGO_SCALES,
   DEFAULT_SIZE_LABEL_SHEET,
   DEFAULT_SIZE_SYSTEMS,
   LEGACY_LEGAL_DISPLAY,
@@ -234,6 +236,38 @@ export function normalizeSizeLabelSheet(
   }
 }
 
+export function normalizeLogoScales(
+  raw: Partial<LogoScaleSettings> | undefined,
+  legacyWordmarkScale = DEFAULT_LOGO_SCALES.brandWordmark,
+): LogoScaleSettings {
+  return {
+    brandWordmark: finiteInRange(
+      raw?.brandWordmark,
+      legacyWordmarkScale,
+      0.5,
+      1.5,
+    ),
+    pageBadge: finiteInRange(
+      raw?.pageBadge,
+      DEFAULT_LOGO_SCALES.pageBadge,
+      0.5,
+      1.5,
+    ),
+    boxLogos: finiteInRange(
+      raw?.boxLogos,
+      DEFAULT_LOGO_SCALES.boxLogos,
+      0.5,
+      1.5,
+    ),
+    sizeChartLogos: finiteInRange(
+      raw?.sizeChartLogos,
+      DEFAULT_LOGO_SCALES.sizeChartLogos,
+      0.5,
+      1.5,
+    ),
+  }
+}
+
 export function primaryProductFromDoc(doc: {
   title: LabelDocument['title']
   sku: string
@@ -302,6 +336,14 @@ export function migrateDocument(raw: Partial<LabelDocument> & Record<string, unk
   const boxLogoRefs: LogoRef[] = Array.isArray(raw.boxLogoRefs)
     ? (raw.boxLogoRefs as LogoRef[])
     : boxLogos.map((id) => ({ kind: 'catalog' as const, id }))
+  const boxLayout = normalizeBoxLayout(
+    raw.boxLayout as Partial<BoxLayoutSettings> | undefined,
+  )
+  const logoScales = normalizeLogoScales(
+    raw.logoScales as Partial<LogoScaleSettings> | undefined,
+    boxLayout.wordmarkScale,
+  )
+  boxLayout.wordmarkScale = logoScales.brandWordmark
 
   // Prefer explicit title (dual model/range from defaultTitle); else primary product.
   const resolvedTitle =
@@ -346,6 +388,7 @@ export function migrateDocument(raw: Partial<LabelDocument> & Record<string, unk
     sizeLabelSheet: normalizeSizeLabelSheet(
       raw.sizeLabelSheet as Partial<SizeLabelSheetSettings> | undefined,
     ),
+    logoScales,
     sizeChartId: (raw.sizeChartId as string) ?? '',
     mode: raw.mode === 'single' ? 'single' : 'dual',
     legal: (raw.legal as LegalProfile) ?? legalProfileById('adult-class-a'),
@@ -367,9 +410,7 @@ export function migrateDocument(raw: Partial<LabelDocument> & Record<string, unk
     boxTableFlow: normalizeBoxTableFlow(
       raw.boxTableFlow as BoxTableFlow | undefined,
     ),
-    boxLayout: normalizeBoxLayout(
-      raw.boxLayout as Partial<BoxLayoutSettings> | undefined,
-    ),
+    boxLayout,
     legalDisplay: normalizeLegalDisplay(
       raw.legalDisplay as Partial<LegalDisplayOptions> | undefined,
       legacy,
@@ -399,6 +440,12 @@ export function migratePreset(preset: ModelPreset): ModelPreset {
       : [primary]
 
   const boxLogos = [...(preset.boxLogos ?? [])]
+  const boxLayout = normalizeBoxLayout(preset.boxLayout)
+  const logoScales = normalizeLogoScales(
+    preset.logoScales,
+    boxLayout.wordmarkScale,
+  )
+  boxLayout.wordmarkScale = logoScales.brandWordmark
   return {
     ...preset,
     boxProductMode: preset.boxProductMode ?? 'single',
@@ -411,8 +458,9 @@ export function migratePreset(preset: ModelPreset): ModelPreset {
       preset.sizeTable?.rows,
     ),
     boxTableFlow: normalizeBoxTableFlow(preset.boxTableFlow),
-    boxLayout: normalizeBoxLayout(preset.boxLayout),
+    boxLayout,
     sizeLabelSheet: normalizeSizeLabelSheet(preset.sizeLabelSheet),
+    logoScales,
     legalDisplay: normalizeLegalDisplay(preset.legalDisplay, legacy),
     pdfFontMode: preset.pdfFontMode ?? 'outlined',
     boxTextColorMode: preset.boxTextColorMode ?? 'pure-k',

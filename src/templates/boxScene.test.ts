@@ -17,7 +17,11 @@ import {
   buildResponsiveBoxLabelScene,
   lastBoxLayoutMeta,
 } from '@/templates/boxScene'
-import { buildBoxLabelScene } from '@/templates/scenes'
+import {
+  buildBoxLabelScene,
+  buildSizeChartScene,
+  buildSizeLabelScene,
+} from '@/templates/scenes'
 import type { SceneNode } from '@/templates/scenes'
 
 function sceneText(nodes: SceneNode[]): string {
@@ -84,6 +88,133 @@ function tableFor(
   return { id, name: id, mode, rows }
 }
 
+describe('size-label responsive content', () => {
+  it('applies stored wordmark and page-badge scales to size-label artwork', () => {
+    const table = tableFor('scaled-assets', 'dual', dualRows(1))
+    const doc = documentFromPreset(
+      basePreset({
+        id: 'scaled-assets',
+        name: 'SCALED ASSETS',
+        mode: 'dual',
+        sizeTable: table,
+        logoScales: {
+          brandWordmark: 1.2,
+          pageBadge: 1.5,
+          boxLogos: 1,
+          sizeChartLogos: 1,
+        },
+      }),
+      migrateDocument({}).legal,
+    )
+    const scene = buildSizeLabelScene(doc, table, true, {
+      pageLogoHref: 'badge.svg',
+      sizeWordmarkHref: 'wordmark.svg',
+    })
+    const badge = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'image' }> =>
+        node.type === 'image' && node.href === 'badge.svg',
+    )
+    const wordmark = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'image' }> =>
+        node.type === 'image' && node.href === 'wordmark.svg',
+    )
+
+    expect(badge?.h).toBe(15)
+    expect(wordmark?.h).toBeCloseTo(3.84)
+  })
+
+  it('applies the stored scale to size-chart logos', () => {
+    const table = tableFor('chart-scale', 'single', singleRows(2))
+    const doc = documentFromPreset(
+      basePreset({
+        id: 'chart-scale',
+        name: 'CHART SCALE',
+        mode: 'single',
+        sizeTable: table,
+        logoScales: {
+          brandWordmark: 1,
+          pageBadge: 1,
+          boxLogos: 1,
+          sizeChartLogos: 1.5,
+        },
+      }),
+      migrateDocument({}).legal,
+    )
+    const scene = buildSizeChartScene(doc, table, ['chart-logo.svg'])
+    const logo = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'image' }> =>
+        node.type === 'image' && node.href === 'chart-logo.svg',
+    )
+
+    expect(logo).toMatchObject({ w: 123, h: 81 })
+  })
+
+  it('reserves the rendered page-logo width before starting the sheet title', () => {
+    const table = tableFor('wide-logo', 'dual', dualRows(1))
+    const doc = documentFromPreset(
+      basePreset({
+        id: 'wide-logo',
+        name: 'ACCEL RACE Ti BOOT ONLY',
+        mode: 'dual',
+        sizeTable: table,
+      }),
+      migrateDocument({}).legal,
+    )
+    const scene = buildSizeLabelScene(doc, table, true, {
+      pageLogoHref: 'wide-logo.svg',
+      pageLogoAspectRatio: 5.1,
+      sizeWordmarkHref: 'iqon.svg',
+    })
+    const pageLogo = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'image' }> =>
+        node.type === 'image' && node.href === 'wide-logo.svg',
+    )
+    const title = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'text' }> =>
+        node.type === 'text' &&
+        node.runs.some((run) => run.text.includes('ACCEL RACE')),
+    )
+    const pieceWordmark = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'image' }> =>
+        node.type === 'image' && node.href === 'iqon.svg',
+    )
+
+    expect(pageLogo).toMatchObject({ x: 8, w: 34, alignX: 'left' })
+    expect(title?.x).toBe(45)
+    expect(pieceWordmark?.alignX).toBe('left')
+  })
+
+  it('shrinks long MONDO ranges only as much as their table cell requires', () => {
+    const table = tableFor('long-mondo', 'single', [
+      {
+        mondo: '236-242',
+        usM: '5.5-6',
+        usW: '6.5-7',
+        uk: '4.5-5',
+        eu: '37-38',
+      },
+    ])
+    const doc = documentFromPreset(
+      basePreset({
+        id: 'long-mondo',
+        name: 'ZOOM TORELLI PRO 80',
+        mode: 'single',
+        sizeTable: table,
+      }),
+      migrateDocument({}).legal,
+    )
+    const scene = buildSizeLabelScene(doc, table, false)
+    const mondo = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'text' }> =>
+        node.type === 'text' &&
+        node.runs.some((run) => run.text === '236-242'),
+    )
+
+    expect(mondo?.runs[0]?.fontSize).toBeLessThan(2.6)
+    expect(mondo?.runs[0]?.fontSize).toBeGreaterThanOrEqual(1.25)
+  })
+})
+
 describe('box sheet geometry', () => {
   it('matches boxSheetMm for 140120 and 120100', () => {
     const s140 = boxSheetMm({ width: 140, height: 120 })
@@ -124,6 +255,68 @@ describe('box sheet geometry', () => {
 })
 
 describe('layoutStrategy', () => {
+  it('applies the stored scale to box sublogos', () => {
+    const table = tableFor('box-logo-scale', 'single', singleRows(6))
+    const doc = documentFromPreset(
+      basePreset({
+        id: 'box-logo-scale',
+        name: 'BOX LOGO SCALE',
+        mode: 'single',
+        sizeTable: table,
+        logoScales: {
+          brandWordmark: 1,
+          pageBadge: 1,
+          boxLogos: 1.5,
+          sizeChartLogos: 1,
+        },
+      }),
+      migrateDocument({}).legal,
+    )
+    const scene = buildResponsiveBoxLabelScene(
+      doc,
+      table,
+      [{ href: 'sublogo.svg', aspectRatio: 1 }],
+      null,
+    )
+    const sublogo = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'image' }> =>
+        node.type === 'image' && node.href === 'sublogo.svg',
+    )
+
+    expect(sublogo?.h).toBeCloseTo(10.8)
+  })
+
+  it('sizes a narrow box wordmark to its natural ratio at the title origin', () => {
+    const table = tableFor('narrow-wordmark', 'single', singleRows(6))
+    const doc = documentFromPreset(
+      basePreset({
+        id: 'narrow-wordmark',
+        name: 'ZOOM TORELLI PRO 80',
+        mode: 'single',
+        sizeTable: table,
+      }),
+      migrateDocument({}).legal,
+    )
+    const scene = buildResponsiveBoxLabelScene(doc, table, [], null, {
+      boxWordmarkHref: 'aeon.svg',
+      boxWordmarkAspectRatio: 3.6034,
+    })
+    const wordmark = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'image' }> =>
+        node.type === 'image' && node.href === 'aeon.svg',
+    )
+    const productTitle = scene.nodes.find(
+      (node): node is Extract<SceneNode, { type: 'text' }> =>
+        node.type === 'text' &&
+        node.y > 20 &&
+        node.runs.some((run) => run.text.includes('ZOOM TORELLI')),
+    )
+
+    expect(wordmark?.alignX).toBe('left')
+    expect(wordmark?.x).toBe(productTitle?.x)
+    expect((wordmark?.w ?? 0) / (wordmark?.h ?? 1)).toBeCloseTo(3.6034, 3)
+  })
+
   it('uses single-standard for a short single-size run', () => {
     const rows = singleRows(6)
     const table = tableFor('short', 'single', rows)

@@ -210,14 +210,6 @@ export function BoxCompositionControls({
             </select>
           </label>
           <NumberControl
-            label="Wordmark scale"
-            value={doc.boxLayout.wordmarkScale}
-            min={0.5}
-            max={1.8}
-            step={0.05}
-            onChange={(wordmarkScale) => patchLayout({ wordmarkScale })}
-          />
-          <NumberControl
             label="Product scale"
             value={doc.boxLayout.productImageScale}
             min={0.5}

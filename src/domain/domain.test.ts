@@ -264,6 +264,7 @@ describe('box config migration & class helpers', () => {
       DEFAULT_BOX_LAYOUT,
       DEFAULT_BOX_TABLE_FLOW,
       DEFAULT_LEGAL_DISPLAY,
+      DEFAULT_LOGO_SCALES,
       DEFAULT_SIZE_LABEL_SHEET,
       DEFAULT_SIZE_SYSTEMS,
     } = await import('@/domain/types')
@@ -279,6 +280,7 @@ describe('box config migration & class helpers', () => {
     expect(doc.boxTableFlow).toEqual(DEFAULT_BOX_TABLE_FLOW)
     expect(doc.boxLayout).toEqual(DEFAULT_BOX_LAYOUT)
     expect(doc.sizeLabelSheet).toEqual(DEFAULT_SIZE_LABEL_SHEET)
+    expect(doc.logoScales).toEqual(DEFAULT_LOGO_SCALES)
     expect(doc.legalDisplay).toEqual(DEFAULT_LEGAL_DISPLAY)
     expect(doc.pdfFontMode).toBe('outlined')
     expect(doc.boxTextColorMode).toBe('pure-k')

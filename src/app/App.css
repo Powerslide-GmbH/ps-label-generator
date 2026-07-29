@@ -380,6 +380,7 @@ textarea {
   cursor: pointer;
   text-align: left;
   min-width: 0;
+  align-content: start;
   transition:
     transform 0.15s ease,
     border-color 0.15s ease,
@@ -1062,6 +1063,120 @@ details {
   min-width: 0;
 }
 
+.logo-picker-main.has-scale {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff 0%, #fbfcff 100%);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.logo-picker-main.has-scale:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(65, 107, 224, 0.1);
+}
+
+.logo-picker-main.has-scale .logo-trigger {
+  padding: 9px 10px 7px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.logo-picker-main.has-scale .logo-trigger:hover {
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.logo-picker.roomy .logo-picker-main.has-scale .logo-trigger-body {
+  min-height: 44px;
+}
+
+.logo-picker.roomy .logo-picker-main.has-scale .logo-preview {
+  width: 66px;
+  height: 46px;
+}
+
+.logo-scale-control {
+  border-top: 1px solid var(--line);
+  background: rgba(245, 247, 251, 0.85);
+  padding: 6px 9px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.logo-scale-control > span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.055em;
+  text-align: left;
+}
+
+.logo-scale-control > div {
+  display: grid;
+  grid-template-columns: 26px 54px 26px;
+  gap: 4px;
+  align-items: center;
+}
+
+.logo-scale-control button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.logo-scale-control button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.logo-scale-control label {
+  position: relative;
+  min-width: 0;
+}
+
+.logo-scale-control input {
+  width: 100%;
+  height: 26px;
+  padding: 4px 14px 4px 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  text-align: right;
+  font-size: 0.72rem;
+  appearance: textfield;
+}
+
+.logo-scale-control input::-webkit-inner-spin-button,
+.logo-scale-control input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.logo-scale-control label span {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 0.65rem;
+  pointer-events: none;
+}
+
 .logo-picker-hint {
   margin: 4px 0 0;
   font-size: 0.72rem;
@@ -1280,7 +1395,7 @@ details {
 
 .logo-modal {
   width: min(860px, 100%);
-  height: min(88vh, 760px);
+  height: auto;
   max-height: min(88vh, 820px);
   padding: 0;
   gap: 0;
@@ -1388,6 +1503,8 @@ details {
   min-height: 0;
   min-height: 190px;
   padding: 8px 22px 20px;
+  align-content: start;
+  grid-auto-rows: max-content;
 }
 
 .logo-modal .modal-upload-hint {

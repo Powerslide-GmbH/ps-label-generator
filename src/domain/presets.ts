@@ -17,6 +17,7 @@ import {
   migrateDocument,
   migratePreset,
   normalizeBoxLayout,
+  normalizeLogoScales,
   normalizeSizeLabelSheet,
   syncPrimaryProductFields,
 } from './boxConfig'
@@ -90,6 +91,10 @@ export function documentFromPreset(
     }),
     titleSizes: { ...DEFAULT_TITLE_SIZES, ...normalized.titleSizes },
     sizeLabelSheet: normalizeSizeLabelSheet(normalized.sizeLabelSheet),
+    logoScales: normalizeLogoScales(
+      normalized.logoScales,
+      normalized.boxLayout?.wordmarkScale,
+    ),
     sizeChartId: table.id || normalized.sizeChartId || '',
     mode: table.mode || normalized.mode,
     legal: structuredClone(
@@ -170,6 +175,7 @@ export function documentToModelPreset(
     materials: normalizeMaterials(synced.materials),
     titleSizes: { ...synced.titleSizes },
     sizeLabelSheet: { ...synced.sizeLabelSheet },
+    logoScales: { ...synced.logoScales },
     legalProfileId: synced.legal.id,
     outputs: { ...synced.outputs },
     defaultProductImageId: synced.productImageName ?? undefined,

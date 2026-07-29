@@ -180,6 +180,9 @@ export function parseModelJson(
     sizeLabelSheet: isObject(raw.sizeLabelSheet)
       ? (raw.sizeLabelSheet as ModelPreset['sizeLabelSheet'])
       : undefined,
+    logoScales: isObject(raw.logoScales)
+      ? (raw.logoScales as ModelPreset['logoScales'])
+      : undefined,
     legalProfileId,
     outputs: {
       sizeLabelNormal: Boolean(

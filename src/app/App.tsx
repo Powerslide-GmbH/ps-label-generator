@@ -284,6 +284,13 @@ export default function App() {
     return asset ? contentUrl(asset.path) : ''
   }
 
+  const logoAspectRatio = (id: string | null | undefined) => {
+    if (!id) return undefined
+    const custom = doc.customLogos.find((l) => l.id === id)
+    if (custom?.aspectRatio) return custom.aspectRatio
+    return catalog?.logoById.get(id)?.aspectRatio
+  }
+
   useEffect(() => {
     const href = logoHref(doc.brandWordmarkLogoId)
     if (!href) {
@@ -372,17 +379,19 @@ export default function App() {
         ),
     ]
     const colorWordmark = logoHref(doc.brandWordmarkLogoId) || undefined
+    const fallbackPageLogoId = catalog?.logoById.has('PS_small_CMYK')
+      ? 'PS_small_CMYK'
+      : 'PS_big_CMYK'
+    const pageLogoId = doc.badgeLogoId || fallbackPageLogoId
     const assets = {
       // Color wordmark as selected (box + size-sheet footer)
       wordmarkHref: colorWordmark,
       boxWordmarkHref: colorWordmark,
+      boxWordmarkAspectRatio: logoAspectRatio(doc.brandWordmarkLogoId),
       // Black wordmark for individual size-label pieces
       sizeWordmarkHref: sizeWordmarkUrl || colorWordmark,
-      pageLogoHref:
-        logoHref(doc.badgeLogoId) ||
-        logoHref('PS_small_CMYK') ||
-        logoHref('PS_big_CMYK') ||
-        undefined,
+      pageLogoHref: logoHref(pageLogoId) || undefined,
+      pageLogoAspectRatio: logoAspectRatio(pageLogoId),
       materialPairs,
       classLogoHref: logoHref('label_class') || undefined,
       showPrintGuides,
@@ -1064,6 +1073,17 @@ export default function App() {
                 logos={allLogos}
                 selected={doc.brandWordmarkLogoId ? [doc.brandWordmarkLogoId] : []}
                 multiple={false}
+                scale={doc.logoScales.brandWordmark}
+                onScaleChange={(brandWordmark) =>
+                  setDoc((prev) => ({
+                    ...prev,
+                    logoScales: { ...prev.logoScales, brandWordmark },
+                    boxLayout: {
+                      ...prev.boxLayout,
+                      wordmarkScale: brandWordmark,
+                    },
+                  }))
+                }
                 onImportCustom={importCustomLogo}
                 onChange={(ids) =>
                   setDoc({ ...doc, brandWordmarkLogoId: ids[0] ?? null })
@@ -1074,6 +1094,13 @@ export default function App() {
                 logos={allLogos}
                 selected={doc.badgeLogoId ? [doc.badgeLogoId] : []}
                 multiple={false}
+                scale={doc.logoScales.pageBadge}
+                onScaleChange={(pageBadge) =>
+                  setDoc((prev) => ({
+                    ...prev,
+                    logoScales: { ...prev.logoScales, pageBadge },
+                  }))
+                }
                 onImportCustom={importCustomLogo}
                 onChange={(ids) =>
                   setDoc({ ...doc, badgeLogoId: ids[0] ?? null })
@@ -1083,6 +1110,13 @@ export default function App() {
                 label="Box logos (under title)"
                 logos={allLogos}
                 selected={doc.boxLogos}
+                scale={doc.logoScales.boxLogos}
+                onScaleChange={(boxLogos) =>
+                  setDoc((prev) => ({
+                    ...prev,
+                    logoScales: { ...prev.logoScales, boxLogos },
+                  }))
+                }
                 onImportCustom={importCustomLogo}
                 onChange={(boxLogos) =>
                   setDoc((prev) => ({
@@ -1099,6 +1133,13 @@ export default function App() {
                 label="Size chart logos"
                 logos={allLogos}
                 selected={doc.sizeChartLogos}
+                scale={doc.logoScales.sizeChartLogos}
+                onScaleChange={(sizeChartLogos) =>
+                  setDoc((prev) => ({
+                    ...prev,
+                    logoScales: { ...prev.logoScales, sizeChartLogos },
+                  }))
+                }
                 onImportCustom={importCustomLogo}
                 onChange={(sizeChartLogos) => setDoc({ ...doc, sizeChartLogos })}
               />
